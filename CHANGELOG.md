@@ -6,6 +6,85 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.15.0] — 2026-06-08
+
+Prompt-engineering uplift pass COMPLETE — every shipped pattern (34
+of 34) now ships the uniform uplift template introduced in v0.13.0.
+
+### Patterns uplifted in this release
+
+The remaining 24 patterns received the same uplift the v0.13.0/v0.14.0
+top-10 received: explicit OUTPUT SCHEMA literals, one-shot examples,
+DO NOT rules covering common failure modes, severity calibration
+anchors, canonical-order enforcement.
+
+| Module | # | Pattern | Anchor literature |
+|--------|---|---------|--------------------|
+| 1 (individual) | 2 | Goleman EI | Goleman 2002; Mayer-Salovey 1997; Joseph-Newman 2010 |
+| 1 | 3 | Johari Window | Luft 1969; Stone-Heen 2014; Kadavath 2022 |
+| 1 | 4 | DANVA Emotion Reader | Nowicki-Duke; Ekman; Plutchik; Russell |
+| 1 | 5 | Cognitive Reappraisal | Gross 1998/2014; Sheppes-Suri-Gross 2015 |
+| 1 | 7 | HEXACO Personality | Lee-Ashton 2004-2018; Bourdage 2007 |
+| 1 | 8 | Grant Strengths | Grant-Schwartz 2011; Kaiser-Kaplan 2009 |
+| 1 | 9 | Motivation Traps | Saxberg-Hess 2013; Weiner 1985; Bandura 1977 |
+| 1 | 10 | SDT Intrinsic Reward | Deci-Ryan; Pink 2009; Casper 2023 |
+| 1 | 11 | McGregor Orchestrator | McGregor 1960; Eisenhardt 1989 agency theory |
+| 1 | 12 | Vroom Expectancy | Vroom 1964; Porter-Lawler 1968; Bandura 1977 |
+| 2 (team) | 13 | GRPI Working Agreement | Beckhard 1972; Rubin-Plovnick-Fry 1977 |
+| 2 | 15 | Social Loafing | Latane 1979; Karau-Williams 1993 |
+| 2 | 16 | Heffernan Superflocks | Heffernan 2014; Muir 1996; Page 2007 |
+| 2 | 19 | McAllister Trust | McAllister 1995 (cognitive vs affective) |
+| 2 | 21 | Glaser Conversation | Glaser 2014 Conversational Intelligence |
+| 2 | 22 | Stone-Heen Feedback | Stone-Heen 2014 Thanks for the Feedback |
+| 2 | 23 | Plus/Delta Feedback | Joiner Associates; Brown 2018 |
+| 2 | 24 | SMART Goal | Doran 1981; Locke-Latham 1990 |
+| 2 | 25 | Group Decision Models | Kaner 2014; Vroom-Yetton 1973 |
+| 2 | 29 | Thomas-Kilmann | Thomas-Kilmann 1974 conflict modes |
+| 3 (org) | 31 | Schein Iceberg Culture | Schein 1985/2010/2017 |
+| 3 | 32 | Robbins-Judge 7 Culture | Robbins-Judge OB 17th ed. 2017 |
+| 3 | 33 | Org Structure Matrix | Galbraith Star Model; Mintzberg 1983 |
+| 3 | 34 | Span of Control | Galbraith 1977; Mintzberg 1983 |
+
+### Changed
+
+- Every `prompts.py` across the 24 patterns listed above. Public
+  template constant names and `{placeholder}` fields are unchanged;
+  `assemble_prompt` semantics are unchanged; all downstream callers
+  see no API break.
+- System prompts now ship explicit posture rules, anti-pattern
+  instructions, calibration tables (severity / fit / quality /
+  motivation thresholds), and per-category symptom signatures.
+- Each task prompt that the generator parses now ships a literal
+  OUTPUT SCHEMA block with the exact JSON shape.
+- Pattern-specific DO NOT rules prevent the most common failure modes
+  observed in the v0.12.x baseline (invented quotes, vague
+  interventions, schema-violating labels, sycophantic mimicry being
+  scored as relationship_management, performative care being scored
+  as affective trust, mid-superflocks "make the top agent better"
+  recommendations, identity-trigger apology spirals being escalated,
+  etc.).
+- One-shot examples on each pattern's main scoring prompt demonstrate
+  the textbook failure signature for that pattern with verbatim
+  evidence quotes and named-framework anchoring.
+
+### Why
+
+This closes the prompt-layer quality gap across the entire pattern
+library. The 0.10–0.12 releases shipped the runner, cost tracking,
+and shared cache; the 0.13–0.14 releases lifted the top 10
+prompts; 0.15.0 brings the long tail (24 patterns) to the same bar.
+The diagnose pipeline now has uniform per-pattern prompt quality
+regardless of which sub-bundle the caller invokes.
+
+### Compatibility
+
+- All 2,181 tests pass unchanged (1 skipped: crewai adapter, extra
+  not installed in dev).
+- Wire format of every analyzer's LLM output is preserved.
+- Public template constant names + `{placeholder}` field sets are
+  unchanged across all 34 patterns.
+- `assemble_prompt` semantics are unchanged.
+
 ## [0.14.0] — 2026-06-08
 
 Prompt-engineering uplift pass — top 10 patterns completed.
