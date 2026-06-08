@@ -1,6 +1,6 @@
 [project]
 name = "valanistack"
-version = "0.7.0"
+version = "0.10.0"
 description = "Organizational behavior, practiced on AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -143,6 +143,7 @@ vstack-gbrain = "vstack.gbrain.cli:main"
 vstack-bench = "vstack.benchmarks.cli:main"
 vstack-doctor = "vstack.doctor.cli:main"
 vstack-hello = "vstack.hello.cli:main"
+vstack-diagnose = "vstack.diagnose.cli:main"
 vstack-lewin = "vstack.lewin.cli:main"
 vstack-goleman = "vstack.goleman_ei.cli:main"
 vstack-johari = "vstack.johari.cli:main"
@@ -192,6 +193,7 @@ only-include = []
 [tool.hatch.build.targets.wheel.force-include]
 "_packaging/vstack/__init__.py" = "vstack/__init__.py"
 "_packaging/vstack/py.typed" = "vstack/py.typed"
+"_diagnose/lib" = "vstack/diagnose"
 "_mcp/lib" = "vstack/mcp"
 "_memory/lib" = "vstack/memory"
 "_upgrade/lib" = "vstack/upgrade"
@@ -261,6 +263,7 @@ testpaths = [
     "module-1-individual",
     "module-2-team",
     "module-3-organization",
+    "_diagnose",
     "_mcp",
     "_memory",
     "_upgrade",

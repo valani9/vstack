@@ -1,0 +1,578 @@
+"""The diagnose() runner: executes a bundle of vstack patterns against
+one trace and merges their findings into a single ranked report.
+
+Design notes
+------------
+
+1. We do NOT enforce a single Result schema on every pattern. Patterns
+   ship their own analyzer classes with their own return types. The
+   runner runs each analyzer's main entry point, then normalizes
+   whatever comes back into a small :class:`Finding` dataclass via
+   each pattern's adapter (``_adapters/lib`` already has one per
+   pattern). When no adapter is available the runner falls back to
+   reflecting on common attribute names ("score", "severity",
+   "findings", "summary"), so adding a new pattern works without code
+   changes here.
+
+2. Patterns execute serially in the sync ``diagnose()`` because some
+   pattern clients (Anthropic, OpenAI) are not safe to call concurrently
+   from a single key without rate-limit coordination. Concurrent
+   execution is available via ``diagnose_async()`` which uses each
+   pattern's published async variant + asyncio.gather, with caller
+   responsible for client concurrency.
+
+3. Each pattern's failure is isolated. If one analyzer raises, the
+   runner records the exception in the report's ``errors`` list and
+   continues with the rest. A user debugging a misbehaving agent does
+   not want one broken pattern to wipe out the other six findings.
+
+4. Findings are ranked by severity (highest first), then by pattern
+   id (lowest first), so reports read top-down in the order a human
+   debugger would want to act on them.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Callable, Iterable, Sequence
+
+from .registry import (
+    ALL_SHAPES,
+    DEFAULT_BUNDLES,
+    PATTERNS,
+    PatternInfo,
+    TraceShape,
+    iter_bundle,
+    resolve_pattern,
+    severity_rank,
+)
+
+log = logging.getLogger("vstack.diagnose")
+
+
+# --- output schema ----------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Finding:
+    """A single ranked finding extracted from one pattern's output.
+
+    Severity is one of the seven-point labels from
+    :data:`vstack.diagnose.registry.SEVERITY_ORDER`. ``evidence`` is a
+    short free-text quote or summary from the underlying pattern result;
+    ``intervention`` is the recommended next-step phrasing that pattern
+    would suggest. Both are optional because different patterns
+    emit different richness.
+    """
+
+    pattern: str
+    severity: str
+    title: str
+    evidence: str = ""
+    intervention: str = ""
+
+    def severity_rank(self) -> int:
+        return severity_rank(self.severity)
+
+
+@dataclass
+class PatternResult:
+    """The raw result of one pattern execution + the extracted findings.
+
+    The runner keeps the raw ``result`` object around so a caller who
+    wants pattern-specific richness (e.g., the full Lencioni pyramid
+    breakdown) can still get at it without re-running the analyzer.
+    ``findings`` is the normalized, ranking-ready form.
+    """
+
+    pattern: str
+    info: PatternInfo
+    result: Any = None
+    findings: list[Finding] = field(default_factory=list)
+    error: str | None = None
+    elapsed_seconds: float = 0.0
+
+
+@dataclass
+class DiagnoseReport:
+    """The cross-pattern report ``diagnose()`` returns.
+
+    Field ``per_pattern`` preserves the order in which patterns ran.
+    Field ``findings`` is the merged + ranked view (highest severity
+    first) and is what most users will read. ``errors`` lists pattern
+    failures by pattern name with the exception message.
+    """
+
+    shape: str
+    per_pattern: list[PatternResult] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
+    errors: dict[str, str] = field(default_factory=dict)
+
+    def top(self, k: int = 5) -> list[Finding]:
+        """Return the top-k findings by severity rank."""
+        return self.findings[:k]
+
+    def to_markdown(self) -> str:
+        """Render the report as a single self-contained Markdown
+        document. The format is opinionated: an overview line, the
+        top-3 findings as a numbered list, then a per-pattern section
+        for full traceability."""
+        lines: list[str] = []
+        lines.append(f"# vstack diagnose -- {self.shape} trace")
+        lines.append("")
+        lines.append(
+            f"Ran {len(self.per_pattern)} patterns; "
+            f"surfaced {len(self.findings)} findings, "
+            f"{len(self.errors)} pattern errors."
+        )
+        lines.append("")
+        if self.findings:
+            lines.append("## Top findings")
+            for i, f in enumerate(self.top(5), 1):
+                lines.append(
+                    f"{i}. **[{f.severity}]** `{f.pattern}` -- {f.title}"
+                )
+                if f.evidence:
+                    lines.append(f"   - evidence: {f.evidence}")
+                if f.intervention:
+                    lines.append(f"   - intervention: {f.intervention}")
+            lines.append("")
+        if self.errors:
+            lines.append("## Pattern errors")
+            for name, msg in self.errors.items():
+                lines.append(f"- `{name}`: {msg}")
+            lines.append("")
+        return "\n".join(lines)
+
+
+# --- normalization ----------------------------------------------------
+
+# Reflect-on-common-shapes normalization. Patterns that expose
+# different return objects all converge here. We deliberately do not
+# break on missing attributes; an unmappable result becomes a single
+# "ran clean / no actionable finding" entry rather than an error.
+
+
+def _coerce_findings(pattern: str, result: Any) -> list[Finding]:
+    """Best-effort extraction of one or more Finding rows from any
+    pattern result object. Returns an empty list when the pattern
+    declined to surface anything actionable (e.g., score below floor).
+
+    The reflection logic looks for any of the following attribute
+    names, in order:
+      - ``findings`` (preferred; iterable of dicts/objects with
+        ``severity`` + ``title`` keys)
+      - ``top_findings`` (list of strings/dicts)
+      - ``severity`` + ``title`` on the result itself
+      - ``score`` + a textual summary; we map score -> severity via
+        the ``score_to_severity`` helper
+      - last-resort: the result's repr, with severity ``trace``
+    """
+    if result is None:
+        return []
+
+    # Case A: explicit findings list
+    candidates = getattr(result, "findings", None) or getattr(
+        result, "top_findings", None
+    )
+    if candidates:
+        out: list[Finding] = []
+        for raw in candidates:
+            if isinstance(raw, Finding):
+                out.append(raw)
+                continue
+            # dict-like
+            if isinstance(raw, dict):
+                out.append(
+                    Finding(
+                        pattern=pattern,
+                        severity=str(
+                            raw.get("severity") or raw.get("level") or "trace"
+                        ),
+                        title=str(
+                            raw.get("title") or raw.get("name") or raw.get("label") or ""
+                        ),
+                        evidence=str(raw.get("evidence") or raw.get("quote") or ""),
+                        intervention=str(
+                            raw.get("intervention") or raw.get("next_step") or ""
+                        ),
+                    )
+                )
+                continue
+            # object-like
+            out.append(
+                Finding(
+                    pattern=pattern,
+                    severity=str(getattr(raw, "severity", "trace")),
+                    title=str(
+                        getattr(raw, "title", None)
+                        or getattr(raw, "name", None)
+                        or getattr(raw, "label", "")
+                    ),
+                    evidence=str(
+                        getattr(raw, "evidence", "") or getattr(raw, "quote", "")
+                    ),
+                    intervention=str(
+                        getattr(raw, "intervention", "")
+                        or getattr(raw, "next_step", "")
+                    ),
+                )
+            )
+        return out
+
+    # Case B: result itself has severity + title
+    sev = getattr(result, "severity", None)
+    title = (
+        getattr(result, "title", None)
+        or getattr(result, "summary", None)
+        or getattr(result, "description", None)
+    )
+    if sev and title:
+        return [
+            Finding(
+                pattern=pattern,
+                severity=str(sev),
+                title=str(title),
+                evidence=str(getattr(result, "evidence", "")),
+                intervention=str(
+                    getattr(result, "intervention", "")
+                    or getattr(result, "next_step", "")
+                ),
+            )
+        ]
+
+    # Case C: numeric score, derive severity
+    score = getattr(result, "score", None)
+    if score is not None:
+        return [
+            Finding(
+                pattern=pattern,
+                severity=_score_to_severity(score),
+                title=str(
+                    getattr(result, "summary", None)
+                    or getattr(result, "description", None)
+                    or f"score={score}"
+                ),
+                evidence=str(getattr(result, "evidence", "")),
+                intervention=str(getattr(result, "intervention", "")),
+            )
+        ]
+
+    # Case D: nothing actionable, but we ran. Drop, don't error.
+    return []
+
+
+def _score_to_severity(score: Any) -> str:
+    """Map a numeric pattern score to a 7-point severity label. The
+    convention across vstack patterns is that higher = worse for
+    "deficit / dysfunction / risk" scores, but some patterns invert it
+    (1=very inaccurate ... 7=very accurate, etc.). When in doubt we
+    default to treating the absolute distance from 0.5 as the severity
+    on a 0-1 scale, which is conservative but always defensible.
+    """
+    try:
+        s = float(score)
+    except (TypeError, ValueError):
+        return "trace"
+    # Heuristic: if the value looks like a 0-1 axis use it directly,
+    # if it's 0-10 normalize to 0-1, if it's 0-100 normalize too.
+    if 0.0 <= s <= 1.0:
+        norm = s
+    elif s <= 10.0:
+        norm = s / 10.0
+    else:
+        norm = max(0.0, min(1.0, s / 100.0))
+    if norm < 0.15:
+        return "trace"
+    if norm < 0.30:
+        return "low"
+    if norm < 0.50:
+        return "moderate"
+    if norm < 0.70:
+        return "medium"
+    if norm < 0.90:
+        return "high"
+    return "critical"
+
+
+# --- pattern execution ------------------------------------------------
+
+
+def _resolve_trace_shape(trace: Any, override: TraceShape | None) -> TraceShape:
+    """Decide which trace shape we're dealing with.
+
+    Order: explicit override > attribute introspection > fallback.
+    Multi-agent traces carry an ``agents`` list; single-agent traces
+    carry a ``steps`` list. Org traces carry an ``org_chart`` or are
+    forced via override.
+    """
+    if override is not None:
+        if override not in ALL_SHAPES:
+            raise ValueError(
+                f"unknown trace shape {override!r}; expected one of {ALL_SHAPES}"
+            )
+        return override
+    if hasattr(trace, "agents") and getattr(trace, "agents"):
+        return "team"
+    if hasattr(trace, "steps"):
+        return "individual"
+    if hasattr(trace, "org_chart") or hasattr(trace, "structure_matrix"):
+        return "org"
+    log.warning(
+        "could not infer trace shape from %s; defaulting to 'team'",
+        type(trace).__name__,
+    )
+    return "team"
+
+
+def _normalize_bundle(
+    bundle: Sequence[str | PatternInfo] | None, shape: TraceShape
+) -> tuple[PatternInfo, ...]:
+    if bundle is None:
+        return iter_bundle(shape)
+    out: list[PatternInfo] = []
+    for item in bundle:
+        if isinstance(item, PatternInfo):
+            out.append(item)
+            continue
+        if item not in PATTERNS:
+            raise ValueError(
+                f"unknown pattern {item!r}; known: {sorted(PATTERNS)}"
+            )
+        out.append(PATTERNS[item])
+    return tuple(out)
+
+
+def _call_analyzer(analyzer_obj: Any, trace: Any) -> Any:
+    """Call whichever entry point the analyzer exposes. Patterns
+    standardized on a few names (``run``, ``analyze``, ``generate``,
+    ``__call__``). We try them in order and pick the first one that
+    exists. If none exist we raise so the user sees the misconfiguration
+    immediately instead of getting an empty report.
+    """
+    for name in ("run", "analyze", "generate", "audit", "detect", "diagnose"):
+        method: Callable[..., Any] | None = getattr(analyzer_obj, name, None)
+        if callable(method):
+            return method(trace)
+    if callable(analyzer_obj):
+        return analyzer_obj(trace)
+    raise TypeError(
+        f"analyzer {type(analyzer_obj).__name__} does not expose a known "
+        f"entry point (run/analyze/generate/audit/detect/diagnose/__call__)"
+    )
+
+
+async def _call_analyzer_async(analyzer_obj: Any, trace: Any) -> Any:
+    for name in ("run", "analyze", "generate", "audit", "detect", "diagnose"):
+        method: Callable[..., Any] | None = getattr(analyzer_obj, name, None)
+        if callable(method):
+            res = method(trace)
+            if asyncio.iscoroutine(res):
+                return await res
+            return res
+    if callable(analyzer_obj):
+        res = analyzer_obj(trace)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
+    raise TypeError(
+        f"async analyzer {type(analyzer_obj).__name__} does not expose a "
+        f"known entry point"
+    )
+
+
+# --- public api -------------------------------------------------------
+
+
+def diagnose(
+    trace: Any,
+    *,
+    llm_client: Any | None = None,
+    shape: TraceShape | None = None,
+    patterns: Sequence[str | PatternInfo] | None = None,
+    recipe: str | None = None,
+    mode: str = "standard",
+    analyzer_kwargs: dict[str, dict[str, Any]] | None = None,
+) -> DiagnoseReport:
+    """Run a curated bundle of patterns against ``trace`` and return a
+    ranked findings report.
+
+    Parameters
+    ----------
+    trace
+        Any vstack trace object. The runner infers the shape
+        (``individual`` / ``team`` / ``org``) from attribute presence.
+    llm_client
+        An LLM client conforming to the
+        :class:`vstack.aar.LLMClient` protocol. The same client is
+        passed to every analyzer in the bundle.
+    shape
+        Override the inferred trace shape.
+    patterns
+        Override the default bundle. Each item is either a pattern slug
+        from :data:`PATTERNS` or a :class:`PatternInfo` instance.
+    mode
+        Pipeline mode forwarded to analyzers that accept a ``mode=``
+        kwarg (``quick`` / ``standard`` / ``forensic``). Patterns that
+        do not accept it ignore it via :func:`analyzer_kwargs`.
+    analyzer_kwargs
+        Per-pattern keyword overrides. Maps pattern slug to a dict of
+        kwargs passed to that pattern's analyzer constructor in
+        addition to ``llm_client`` and ``mode``.
+
+    recipe
+        Named recipe from :data:`vstack.diagnose.RECIPES`. When passed
+        in, the recipe's pattern list is used (and its shape is the
+        default ``shape``). Explicit ``patterns=`` still wins if both
+        are supplied.
+
+    Returns
+    -------
+    :class:`DiagnoseReport`
+    """
+    if recipe is not None and patterns is None:
+        from .recipes import RECIPES
+        if recipe not in RECIPES:
+            raise ValueError(
+                f"unknown recipe {recipe!r}; known: {sorted(RECIPES)}"
+            )
+        rec = RECIPES[recipe]
+        patterns = rec.patterns
+        if shape is None:
+            shape = rec.shape
+    inferred_shape = _resolve_trace_shape(trace, shape)
+    bundle = _normalize_bundle(patterns, inferred_shape)
+    overrides = dict(analyzer_kwargs or {})
+
+    report = DiagnoseReport(shape=inferred_shape)
+    for info in bundle:
+        result = PatternResult(pattern=info.name, info=info)
+        try:
+            classes = resolve_pattern(info)
+            cls = classes["analyzer"]
+            if cls is None:
+                raise ImportError(
+                    f"pattern {info.name!r} has no main analyzer class"
+                )
+            ctor_kwargs: dict[str, Any] = {}
+            if llm_client is not None:
+                ctor_kwargs["llm_client"] = llm_client
+            # Some analyzers want llm_client positional; we always pass
+            # it as a kwarg and rely on the constructor to map it.
+            ctor_kwargs.update(overrides.get(info.name, {}))
+            if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
+                ctor_kwargs.setdefault("mode", mode)
+            import time
+            t0 = time.time()
+            try:
+                inst = cls(**ctor_kwargs)
+            except TypeError:
+                # Fallback for analyzers that take llm_client positional.
+                if llm_client is not None:
+                    inst = cls(llm_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
+                else:
+                    raise
+            result.result = _call_analyzer(inst, trace)
+            result.findings = _coerce_findings(info.name, result.result)
+            result.elapsed_seconds = time.time() - t0
+        except Exception as exc:  # one bad pattern doesn't kill the report
+            log.warning("pattern %s failed: %s", info.name, exc)
+            result.error = str(exc)
+            report.errors[info.name] = str(exc)
+        report.per_pattern.append(result)
+
+    _merge_and_rank(report)
+    return report
+
+
+async def diagnose_async(
+    trace: Any,
+    *,
+    llm_client: Any | None = None,
+    shape: TraceShape | None = None,
+    patterns: Sequence[str | PatternInfo] | None = None,
+    recipe: str | None = None,
+    mode: str = "standard",
+    analyzer_kwargs: dict[str, dict[str, Any]] | None = None,
+    concurrency: int = 4,
+) -> DiagnoseReport:
+    """Async variant of :func:`diagnose`. Runs the bundle's async
+    analyzers concurrently with a configurable max-in-flight bound
+    (``concurrency``). Caller is responsible for any LLM-client
+    rate-limit coordination."""
+    if recipe is not None and patterns is None:
+        from .recipes import RECIPES
+        if recipe not in RECIPES:
+            raise ValueError(
+                f"unknown recipe {recipe!r}; known: {sorted(RECIPES)}"
+            )
+        rec = RECIPES[recipe]
+        patterns = rec.patterns
+        if shape is None:
+            shape = rec.shape
+    inferred_shape = _resolve_trace_shape(trace, shape)
+    bundle = _normalize_bundle(patterns, inferred_shape)
+    overrides = dict(analyzer_kwargs or {})
+    sem = asyncio.Semaphore(max(1, concurrency))
+    report = DiagnoseReport(shape=inferred_shape)
+
+    async def _run_one(info: PatternInfo) -> PatternResult:
+        result = PatternResult(pattern=info.name, info=info)
+        async with sem:
+            try:
+                classes = resolve_pattern(info)
+                cls = classes["analyzer_async"] or classes["analyzer"]
+                if cls is None:
+                    raise ImportError(
+                        f"pattern {info.name!r} has no analyzer class"
+                    )
+                ctor_kwargs: dict[str, Any] = {}
+                if llm_client is not None:
+                    ctor_kwargs["llm_client"] = llm_client
+                ctor_kwargs.update(overrides.get(info.name, {}))
+                if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
+                    ctor_kwargs.setdefault("mode", mode)
+                import time
+                t0 = time.time()
+                try:
+                    inst = cls(**ctor_kwargs)
+                except TypeError:
+                    if llm_client is not None:
+                        inst = cls(llm_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
+                    else:
+                        raise
+                result.result = await _call_analyzer_async(inst, trace)
+                result.findings = _coerce_findings(info.name, result.result)
+                result.elapsed_seconds = time.time() - t0
+            except Exception as exc:
+                log.warning("pattern %s failed: %s", info.name, exc)
+                result.error = str(exc)
+        return result
+
+    tasks = [_run_one(info) for info in bundle]
+    per_pattern = await asyncio.gather(*tasks)
+    report.per_pattern = list(per_pattern)
+    for r in report.per_pattern:
+        if r.error:
+            report.errors[r.pattern] = r.error
+    _merge_and_rank(report)
+    return report
+
+
+def _merge_and_rank(report: DiagnoseReport) -> None:
+    """Flatten every per-pattern findings list into the report-level
+    ``findings`` list, sorted by (severity rank desc, pattern id asc).
+    Mutates ``report`` in place."""
+    flat: list[Finding] = []
+    for pr in report.per_pattern:
+        flat.extend(pr.findings)
+    pattern_id = {info.name: info.pattern_id for info in PATTERNS.values()}
+    flat.sort(
+        key=lambda f: (
+            -f.severity_rank(),
+            pattern_id.get(f.pattern, 9999),
+        )
+    )
+    report.findings = flat

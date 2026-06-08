@@ -6,6 +6,128 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.10.0] — 2026-06-08
+
+Named recipes layer for `vstack.diagnose`. Until now, callers had to
+either accept the shape-default bundle or hand-pick patterns; this
+release adds an opinionated layer in between.
+
+### Added — recipes
+
+- `vstack.diagnose.RECIPES`: catalog of 8 named bundles, each curated
+  for a specific recognizable failure mode:
+  - `stuck_in_loop` (individual)
+  - `agents_arguing` (team)
+  - `silent_failure` (team)
+  - `bottleneck_agent` (team)
+  - `bad_feedback_loop` (team)
+  - `culture_drift` (org)
+  - `goal_misalignment` (individual)
+  - `trust_collapse` (team)
+- Each recipe has a description, applicable shape, ordered pattern
+  list, and trigger-keyword phrases.
+- `diagnose(recipe="stuck_in_loop", ...)`: pick a recipe by name.
+  Explicit `patterns=` still wins if both are supplied.
+- `recipe_for_trigger("agent keeps making the same mistake")`:
+  free-text keyword matcher.
+- `vstack-diagnose --recipe <name>` and `--match "<text>"` CLI flags.
+- `vstack-diagnose --list-recipes` enumerates the catalog.
+- Catalog validation runs at import time: a recipe that references
+  an unknown pattern slug raises immediately instead of failing at
+  call time.
+
+### Tests
+
+- 12 new tests in `_diagnose/tests/test_diagnose_recipes.py`.
+- Total `_diagnose` suite: 71 passing.
+- Total repository suite: 2168 passing, 1 skipped (crewai).
+
+## [0.9.0] — 2026-06-08
+
+CLI surface for `vstack.diagnose`. Adds the `vstack-diagnose` entry
+point so the cross-pattern runner is reachable from a shell, not only
+from Python.
+
+### Added
+
+- `vstack-diagnose` CLI: reads a JSON trace from `--trace <path>` or
+  stdin and prints either Markdown (default) or `--json` output of the
+  cross-pattern report.
+- `--list`: enumerates every shipped pattern with its applicable
+  shapes and one-line summary.
+- `--shape {individual|team|org}`: force trace-shape inference.
+- `--patterns slug [slug ...]`: override the default bundle with an
+  explicit list.
+- `--client {anthropic|openai|ollama|none}`: pick the LLM client. The
+  CLI defaults to `none` so no paid call is ever made without explicit
+  opt-in.
+- `--mode {quick|standard|forensic}`: forward pipeline mode to
+  analyzers that accept one.
+- `--top <N>`: number of top findings to surface in Markdown.
+- Permissive trace JSON parsing: required AAR `TraceStep` fields
+  (timestamp/type/content) are auto-filled from common alternative
+  names (`action`, `note`, etc.) so a single line of test JSON
+  produces a valid trace.
+
+### Tests
+
+- 6 new CLI tests in `_diagnose/tests/test_diagnose_cli.py`.
+- Total `_diagnose` suite: 59 passing.
+- Total repository suite: 2156 passing, 1 skipped (crewai).
+
+## [0.8.0] — 2026-06-08
+
+Curated public API + cross-pattern diagnostic runner. Until this
+release, using vstack at scale meant importing each of the 34
+pattern sub-packages by hand and calling their analyzers separately.
+0.8.0 adds a top-level entry point that wraps the patterns into a
+single call.
+
+### Added — `vstack.diagnose` (new surface module)
+
+- `diagnose(trace, llm_client=...)`: runs a curated bundle of patterns
+  against one agent or multi-agent trace and returns a single ranked
+  `DiagnoseReport`. Bundle selection is shape-aware: a single-agent
+  trace runs the individual-failure-mode patterns; a crew trace runs
+  the team patterns; an org-scale trace runs the org-design patterns.
+  Callers can override the bundle with `patterns=[...]`.
+- `diagnose_async(...)`: concurrent variant that uses each pattern's
+  async analyzer with a configurable in-flight bound.
+- `PATTERNS`: a declarative registry of every shipped pattern with
+  module path, main analyzer class name, async variant, applicable
+  trace shapes, summary, and tags. Enumerable for tooling that wants
+  to iterate every pattern without hand-importing.
+- `DiagnoseReport.to_markdown()`: opinionated single-document
+  render with a "Top findings" section and a per-pattern errors
+  section.
+- Findings normalization: the runner reflects on common return-shape
+  attributes (`findings`, `severity`, `score`, …) so new patterns
+  work without changes to the runner.
+- Error isolation: one failing pattern does not kill the report.
+  Failures land in `DiagnoseReport.errors` and the rest of the bundle
+  still produces findings.
+
+### Added — top-level package
+
+- `vstack.__init__` now documents the curated API and exposes
+  `diagnose` / `PATTERNS` via PEP 562 lazy attributes.
+- `vstack.diagnose` is the canonical import path: `from
+  vstack.diagnose import diagnose, PATTERNS`.
+
+### Tests
+
+- 53 new tests across `_diagnose/tests/`:
+  - 44 registry-shape invariants over every shipped pattern.
+  - 9 runner tests covering ranking, error isolation, shape inference,
+    explicit-shape override, markdown rendering, and the async runner.
+- Total repository test count after this release: 2150 passing.
+
+### Compatibility
+
+- All existing single-pattern import paths (`from vstack.aar import
+  AARAnalyzer`, etc.) continue to work unchanged.
+- No pattern source files modified.
+
 ## [0.7.0] — 2026-05-25
 
 Onboarding + launch-polish release. Closes the gap between "library

@@ -69,6 +69,33 @@ vstack-mcp serve                # serve all 34 patterns to any MCP-speaking AI c
 
 That's the whole tour. The next sections go deeper on each surface.
 
+### One-call diagnose
+
+If you have an agent trace and don't know which pattern to start with, run all the relevant ones at once via `vstack.diagnose`. The runner picks the bundle based on whether the trace is single-agent, multi-agent, or org-scale.
+
+```python
+from vstack.diagnose import diagnose
+from vstack.aar import AgentTrace, TraceStep
+from vstack.aar.clients import AnthropicClient
+
+trace = AgentTrace(
+    goal="Refactor the auth module to use JWTs",
+    steps=[TraceStep(action="edit", target="auth.py", note="wrote token issuer")],
+    outcome="Tokens issued but session middleware now breaks on every request",
+    success=False,
+)
+
+report = diagnose(trace, llm_client=AnthropicClient())
+print(report.to_markdown())
+
+# Want every pattern enumerated?
+from vstack.diagnose import PATTERNS
+for slug, info in PATTERNS.items():
+    print(f"{slug:<24}  shapes={info.shapes}  {info.summary}")
+```
+
+The report ranks findings by severity across all patterns in the bundle. If one pattern errors, the rest still run; the failure shows up in `report.errors`. Async callers use `diagnose_async()` with the same signature plus a `concurrency=` knob.
+
 ## Install
 
 > [!TIP]
@@ -117,7 +144,7 @@ git clone https://github.com/valani9/vstack.git
 cd vstack
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,all]"
-pytest -q                                # 2,097 tests
+pytest -q                                # 2,150 tests
 ```
 
 > [!NOTE]
