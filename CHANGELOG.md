@@ -6,6 +6,29 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.18.1] — 2026-06-08
+
+CI hotfix on top of v0.18.0.
+
+### Fixed
+
+- `ruff format --check` failures on `_api/lib/_app.py`,
+  `_api/tests/test_api_diagnose.py`, and `_mcp/lib/_server.py`:
+  applied `ruff format` to bring the new code from v0.17.0/v0.18.0
+  into project format conventions.
+- `mypy --strict` failure on `_api/lib/_app.py:821`:
+  `payload.shape` is `str | None` (from the `DiagnoseRequestEnvelope`
+  Pydantic model) but `diagnose()` expects the
+  `TraceShape` Literal. The validation block above the runner call
+  already rejects non-canonical values; added a narrowed
+  `shape_arg: TraceShape | None` local with a `# type: ignore` cast
+  so mypy accepts it.
+
+### Compatibility
+
+- All 2,210 tests pass unchanged. ruff check clean. mypy `--strict`
+  on the touched files clean.
+
 ## [0.18.0] — 2026-06-08
 
 `POST /v1/diagnose` FastAPI endpoint.

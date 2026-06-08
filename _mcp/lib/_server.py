@@ -409,9 +409,7 @@ def _dispatch_diagnose_call(arguments: dict[str, Any]) -> list[TextContent]:
     arguments = dict(arguments or {})
     trace_data = arguments.get("trace")
     if not isinstance(trace_data, dict):
-        return _error_response(
-            "'trace' must be a JSON object", kind="validation_error"
-        )
+        return _error_response("'trace' must be a JSON object", kind="validation_error")
 
     shape = arguments.get("shape")
     recipe = arguments.get("recipe")

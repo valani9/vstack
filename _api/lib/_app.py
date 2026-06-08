@@ -750,8 +750,7 @@ def build_app(
                 detail={
                     "error": "validation_error",
                     "message": (
-                        "'recipe' and 'patterns' are mutually exclusive; "
-                        "pass one or the other"
+                        "'recipe' and 'patterns' are mutually exclusive; pass one or the other"
                     ),
                 },
             )
@@ -761,8 +760,7 @@ def build_app(
                 detail={
                     "error": "validation_error",
                     "message": (
-                        f"Unknown recipe {payload.recipe!r}; "
-                        f"valid: {sorted(DIAGNOSE_RECIPES)}"
+                        f"Unknown recipe {payload.recipe!r}; valid: {sorted(DIAGNOSE_RECIPES)}"
                     ),
                 },
             )
@@ -774,8 +772,7 @@ def build_app(
                     detail={
                         "error": "validation_error",
                         "message": (
-                            f"Unknown patterns {unknown}; "
-                            f"valid: {sorted(DIAGNOSE_PATTERNS)}"
+                            f"Unknown patterns {unknown}; valid: {sorted(DIAGNOSE_PATTERNS)}"
                         ),
                     },
                 )
@@ -788,10 +785,7 @@ def build_app(
                 status_code=400,
                 detail={
                     "error": "validation_error",
-                    "message": (
-                        f"Unknown shape {payload.shape!r}; "
-                        "valid: individual / team / org"
-                    ),
+                    "message": (f"Unknown shape {payload.shape!r}; valid: individual / team / org"),
                 },
             )
 
@@ -806,6 +800,17 @@ def build_app(
         trace = SimpleNamespace(**trace_data)
         chosen_mode = payload.mode or "standard"
 
+        # Narrow payload.shape (str | None) to the TraceShape Literal
+        # the runner expects. The validation block above already
+        # rejected non-canonical values; mypy needs the cast.
+        from vstack.diagnose.registry import TraceShape
+
+        shape_arg: TraceShape | None = (
+            payload.shape  # type: ignore[assignment]
+            if payload.shape is not None
+            else None
+        )
+
         with time_request(
             surface="rest",
             pattern="diagnose",
@@ -818,7 +823,7 @@ def build_app(
                         diagnose,
                         trace,
                         llm_client=llm,
-                        shape=payload.shape,
+                        shape=shape_arg,
                         patterns=list(payload.patterns) if payload.patterns else None,
                         recipe=payload.recipe,
                         mode=chosen_mode,

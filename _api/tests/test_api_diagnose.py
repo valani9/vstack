@@ -227,8 +227,6 @@ def test_diagnose_appears_in_openapi(client: TestClient) -> None:
     # FastAPI-generated operationId; we just confirm presence.
     assert "operationId" in op
     # The response shape is the DiagnoseResponseEnvelope schema.
-    response_schema = (
-        op["responses"]["200"]["content"]["application/json"]["schema"]
-    )
+    response_schema = op["responses"]["200"]["content"]["application/json"]["schema"]
     assert "$ref" in response_schema
     assert "DiagnoseResponseEnvelope" in response_schema["$ref"]
