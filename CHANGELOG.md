@@ -6,6 +6,51 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.12.0] — 2026-06-08
+
+Shared LLM-response cache across patterns in one `diagnose()` run.
+When a bundle of patterns hits the LLM with identical prompts, the
+cache returns the cached completion without paying twice.
+
+### Added
+
+- `vstack.diagnose.CachingLLMClient`: thin wrapper around any
+  LLM client that memoizes `complete(prompt, system)` calls keyed on
+  `(prompt, system, model)`. SHA-256 keys; LRU eviction at
+  `maxsize=256` (configurable).
+- `vstack.diagnose.CachingClientStats`: hit / miss / insert counters
+  plus a `hit_rate` property and `bytes_saved` heuristic.
+- `diagnose(cache=True, ...)` and `diagnose_async(cache=True, ...)`:
+  opt-in shared cache for the duration of one call. The wrapper is
+  threaded through to every analyzer in the bundle.
+- `DiagnoseReport.cache_stats`: populated when caching was on,
+  `None` otherwise so callers can tell whether the cache was active.
+- `to_markdown()` renders a cache line in the cost section when
+  `cache_stats` is present.
+- `__getattr__` forwarding on the wrapper: analyzers that read
+  unknown attributes off the client (e.g. `last_usage`, `model`)
+  see the real underlying client transparently.
+
+### Tests
+
+- 8 new tests in `_diagnose/tests/test_diagnose_cache.py`:
+  - hash key stability + collision resistance
+  - wrapper returns cached on second identical call
+  - wrapper misses on different prompts
+  - LRU eviction when `maxsize` exceeded
+  - attribute forwarding to inner client
+  - `diagnose()` without cache: two patterns -> two inner calls
+  - `diagnose(cache=True)`: identical prompts -> one inner call
+  - `cache=True` with no client is a graceful no-op
+- Total `_diagnose` suite: 84 passing.
+- Full repository suite: 2181 passing, 1 skipped (crewai).
+
+### Compatibility
+
+- Caching is opt-in (`cache=False` by default).
+- Pattern analyzers see no API change; the wrapper exposes the same
+  `complete()` signature as the underlying client.
+
 ## [0.11.0] — 2026-06-08
 
 Cost tracking in `vstack.diagnose`. The runner now installs an

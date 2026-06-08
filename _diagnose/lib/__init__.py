@@ -30,6 +30,7 @@ pattern's own sub-package.
 
 from __future__ import annotations
 
+from .cache import CachingClientStats, CachingLLMClient
 from .recipes import (
     RECIPES,
     Recipe,
@@ -59,6 +60,8 @@ __all__ = [
     "RECIPES",
     "Recipe",
     "TraceShape",
+    "CachingClientStats",
+    "CachingLLMClient",
     "CostSummary",
     "DiagnoseReport",
     "Finding",

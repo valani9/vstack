@@ -141,6 +141,9 @@ class DiagnoseReport:
     findings: list[Finding] = field(default_factory=list)
     errors: dict[str, str] = field(default_factory=dict)
     cost: CostSummary = field(default_factory=CostSummary)
+    # Populated only when diagnose() was called with cache=True.
+    # Otherwise None so callers can tell whether caching was on at all.
+    cache_stats: Any = None
 
     def top(self, k: int = 5) -> list[Finding]:
         """Return the top-k findings by severity rank."""
@@ -180,6 +183,13 @@ class DiagnoseReport:
                 f"({self.cost.total_tokens} total); "
                 f"{self.cost.elapsed_ms:.0f} ms cumulative latency."
             )
+            if self.cache_stats is not None:
+                lines.append(
+                    f"- Cache: {self.cache_stats.hits} hit(s) of "
+                    f"{self.cache_stats.total_lookups} lookups "
+                    f"({self.cache_stats.hit_rate:.0%} hit rate, "
+                    f"{self.cache_stats.bytes_saved} bytes saved)."
+                )
             if self.cost.by_pattern:
                 lines.append("")
                 lines.append("### By pattern")
@@ -446,6 +456,7 @@ def diagnose(
     recipe: str | None = None,
     mode: str = "standard",
     analyzer_kwargs: dict[str, dict[str, Any]] | None = None,
+    cache: bool = False,
 ) -> DiagnoseReport:
     """Run a curated bundle of patterns against ``trace`` and return a
     ranked findings report.
@@ -497,6 +508,14 @@ def diagnose(
     bundle = _normalize_bundle(patterns, inferred_shape)
     overrides = dict(analyzer_kwargs or {})
 
+    cache_wrapper: Any | None = None
+    if cache and llm_client is not None:
+        from .cache import CachingLLMClient
+        cache_wrapper = CachingLLMClient(inner=llm_client)
+        effective_client = cache_wrapper
+    else:
+        effective_client = llm_client
+
     report = DiagnoseReport(shape=inferred_shape)
     sink, restore_sink = _install_telemetry_sink()
     for info in bundle:
@@ -509,8 +528,8 @@ def diagnose(
                     f"pattern {info.name!r} has no main analyzer class"
                 )
             ctor_kwargs: dict[str, Any] = {}
-            if llm_client is not None:
-                ctor_kwargs["llm_client"] = llm_client
+            if effective_client is not None:
+                ctor_kwargs["llm_client"] = effective_client
             # Some analyzers want llm_client positional; we always pass
             # it as a kwarg and rely on the constructor to map it.
             ctor_kwargs.update(overrides.get(info.name, {}))
@@ -522,8 +541,8 @@ def diagnose(
                 inst = cls(**ctor_kwargs)
             except TypeError:
                 # Fallback for analyzers that take llm_client positional.
-                if llm_client is not None:
-                    inst = cls(llm_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
+                if effective_client is not None:
+                    inst = cls(effective_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
                 else:
                     raise
             result.result = _call_analyzer(inst, trace)
@@ -537,6 +556,8 @@ def diagnose(
 
     _merge_and_rank(report)
     _aggregate_cost(report, sink)
+    if cache_wrapper is not None:
+        report.cache_stats = cache_wrapper.stats
     restore_sink()
     return report
 
@@ -551,6 +572,7 @@ async def diagnose_async(
     mode: str = "standard",
     analyzer_kwargs: dict[str, dict[str, Any]] | None = None,
     concurrency: int = 4,
+    cache: bool = False,
 ) -> DiagnoseReport:
     """Async variant of :func:`diagnose`. Runs the bundle's async
     analyzers concurrently with a configurable max-in-flight bound
@@ -570,6 +592,15 @@ async def diagnose_async(
     bundle = _normalize_bundle(patterns, inferred_shape)
     overrides = dict(analyzer_kwargs or {})
     sem = asyncio.Semaphore(max(1, concurrency))
+
+    cache_wrapper: Any | None = None
+    if cache and llm_client is not None:
+        from .cache import CachingLLMClient
+        cache_wrapper = CachingLLMClient(inner=llm_client)
+        effective_client = cache_wrapper
+    else:
+        effective_client = llm_client
+
     report = DiagnoseReport(shape=inferred_shape)
 
     async def _run_one(info: PatternInfo) -> PatternResult:
@@ -583,8 +614,8 @@ async def diagnose_async(
                         f"pattern {info.name!r} has no analyzer class"
                     )
                 ctor_kwargs: dict[str, Any] = {}
-                if llm_client is not None:
-                    ctor_kwargs["llm_client"] = llm_client
+                if effective_client is not None:
+                    ctor_kwargs["llm_client"] = effective_client
                 ctor_kwargs.update(overrides.get(info.name, {}))
                 if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
                     ctor_kwargs.setdefault("mode", mode)
@@ -593,8 +624,8 @@ async def diagnose_async(
                 try:
                     inst = cls(**ctor_kwargs)
                 except TypeError:
-                    if llm_client is not None:
-                        inst = cls(llm_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
+                    if effective_client is not None:
+                        inst = cls(effective_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
                     else:
                         raise
                 result.result = await _call_analyzer_async(inst, trace)
@@ -617,6 +648,8 @@ async def diagnose_async(
             report.errors[r.pattern] = r.error
     _merge_and_rank(report)
     _aggregate_cost(report, sink)
+    if cache_wrapper is not None:
+        report.cache_stats = cache_wrapper.stats
     return report
 
 
