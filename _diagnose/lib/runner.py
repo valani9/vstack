@@ -36,18 +36,16 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any, Callable, Sequence
 
 from .adapters import Finding, extract_findings
 from .registry import (
     ALL_SHAPES,
-    DEFAULT_BUNDLES,
     PATTERNS,
     PatternInfo,
     TraceShape,
     iter_bundle,
     resolve_pattern,
-    severity_rank,
 )
 
 log = logging.getLogger("vstack.diagnose")

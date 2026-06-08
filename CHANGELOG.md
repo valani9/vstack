@@ -6,6 +6,48 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.18.0] — 2026-06-08
+
+`POST /v1/diagnose` FastAPI endpoint.
+
+Symmetric exposure of `vstack.diagnose.diagnose()` on the HTTP
+surface. v0.17.0 added the MCP `vstack_diagnose` tool; this release
+adds the matching REST endpoint so callers without an MCP transport
+(internal services, dashboards, CI bots) can hit the same
+cross-pattern runner.
+
+### Added
+
+- `POST /v1/diagnose` endpoint with `DiagnoseRequestEnvelope` body
+  schema (trace + shape + recipe + patterns + mode + model + cache +
+  top) and `DiagnoseResponseEnvelope` response schema (shape +
+  findings + per_pattern + errors + cost + optional cache_stats).
+- `DiagnoseRequestEnvelope`, `DiagnoseResponseEnvelope`,
+  `DiagnoseFinding`, `DiagnosePerPatternSummary`,
+  `DiagnoseCostSummary`, `DiagnoseCacheStats` Pydantic models so
+  OpenAPI clients get typed return values instead of `dict[str, Any]`.
+- 8 new tests in `_api/tests/test_api_diagnose.py` covering:
+  - End-to-end ranked-findings response from synthetic patterns.
+  - `top` truncation behavior.
+  - Validation 400s for unknown recipe / unknown pattern / recipe+
+    patterns mutex / unknown shape.
+  - 422 for missing-trace body.
+  - OpenAPI spec inclusion + correct response-schema reference.
+
+### Compatibility
+
+- All 2,210 tests pass (1 skipped: crewai adapter, extra not
+  installed in dev). +8 new tests on top of v0.17.0's 2,202.
+- All existing `/v1/analyze/{name}` per-pattern routes are
+  unchanged. The new endpoint sits alongside them, reusing the same
+  auth + rate-limit + size-enforcement + Prometheus middleware stack.
+- Endpoint runs the runner via `asyncio.to_thread` to keep the
+  event loop responsive, with the standard
+  `state.limits.request_timeout_seconds` deadline + 504 timeout
+  response (mirrors the analyze endpoint).
+- OpenAPI schema is generated automatically from the Pydantic
+  envelopes; `/openapi.json` includes the new path under `/v1/diagnose`.
+
 ## [0.17.0] — 2026-06-08
 
 `vstack_diagnose` cross-pattern MCP tool.

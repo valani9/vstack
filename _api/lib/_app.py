@@ -133,6 +133,66 @@ class AnalyzeResponseEnvelope(BaseModel):
     """True when the detection was served from the configured cache."""
 
 
+class DiagnoseRequestEnvelope(BaseModel):
+    """Body schema for ``POST /v1/diagnose``.
+
+    Wraps :func:`vstack.diagnose.diagnose`. ``trace`` is a generic
+    JSON object; shape is inferred from attribute presence unless
+    ``shape`` overrides it. ``recipe`` and ``patterns`` are mutually
+    exclusive.
+    """
+
+    trace: dict[str, Any]
+    shape: Optional[str] = None
+    recipe: Optional[str] = None
+    patterns: Optional[list[str]] = None
+    mode: Optional[str] = None
+    model: Optional[str] = None
+    cache: bool = False
+    top: Optional[int] = Field(default=None, ge=1, le=50)
+
+
+class DiagnoseFinding(BaseModel):
+    pattern: str
+    severity: str
+    title: str
+    evidence: str = ""
+    intervention: str = ""
+
+
+class DiagnosePerPatternSummary(BaseModel):
+    pattern: str
+    n_findings: int
+    elapsed_seconds: float
+    error: Optional[str] = None
+
+
+class DiagnoseCostSummary(BaseModel):
+    llm_calls: int
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    elapsed_ms: float
+    by_pattern: dict[str, dict[str, float]] = Field(default_factory=dict)
+    by_model: dict[str, dict[str, float]] = Field(default_factory=dict)
+
+
+class DiagnoseCacheStats(BaseModel):
+    hits: int
+    misses: int
+    inserts: int
+    hit_rate: float
+
+
+class DiagnoseResponseEnvelope(BaseModel):
+    shape: str
+    findings: list[DiagnoseFinding]
+    per_pattern: list[DiagnosePerPatternSummary]
+    errors: dict[str, str]
+    cost: DiagnoseCostSummary
+    cache_stats: Optional[DiagnoseCacheStats] = None
+
+
 # ----------------------------------------------------------------------
 # Application-state container
 # ----------------------------------------------------------------------
@@ -642,6 +702,198 @@ def build_app(
             model=chosen_model,
             detection=payload_out,
             cached=False,
+        )
+
+    @app.post(
+        "/v1/diagnose",
+        response_model=DiagnoseResponseEnvelope,
+        responses={
+            400: {"model": APIError},
+            413: {"model": APIError},
+            429: {"model": APIError},
+            502: {"model": APIError},
+            504: {"model": APIError},
+        },
+    )
+    async def diagnose_endpoint(
+        payload: DiagnoseRequestEnvelope = Body(...),
+    ) -> DiagnoseResponseEnvelope:
+        """Run the cross-pattern :func:`vstack.diagnose.diagnose`
+        runner over one trace and return a ranked findings report.
+
+        Inputs follow the runner's signature: trace + optional shape
+        override + recipe OR explicit pattern list + mode + model +
+        cache + top-k truncation. Returns the same merged report the
+        MCP ``vstack_diagnose`` tool returns, but as a typed
+        Pydantic envelope so OpenAPI clients get structured types.
+        """
+        from types import SimpleNamespace
+
+        from vstack.diagnose import (
+            PATTERNS as DIAGNOSE_PATTERNS,
+            RECIPES as DIAGNOSE_RECIPES,
+            diagnose,
+        )
+
+        trace_data = payload.trace
+        try:
+            enforce_trace_limits(trace_data, state.limits)
+        except RequestSizeExceeded as e:
+            raise HTTPException(
+                status_code=413,
+                detail={"error": "request_too_large", "message": str(e)},
+            )
+
+        if payload.recipe and payload.patterns:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "validation_error",
+                    "message": (
+                        "'recipe' and 'patterns' are mutually exclusive; "
+                        "pass one or the other"
+                    ),
+                },
+            )
+        if payload.recipe and payload.recipe not in DIAGNOSE_RECIPES:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "validation_error",
+                    "message": (
+                        f"Unknown recipe {payload.recipe!r}; "
+                        f"valid: {sorted(DIAGNOSE_RECIPES)}"
+                    ),
+                },
+            )
+        if payload.patterns:
+            unknown = [p for p in payload.patterns if p not in DIAGNOSE_PATTERNS]
+            if unknown:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "validation_error",
+                        "message": (
+                            f"Unknown patterns {unknown}; "
+                            f"valid: {sorted(DIAGNOSE_PATTERNS)}"
+                        ),
+                    },
+                )
+        if payload.shape is not None and payload.shape not in (
+            "individual",
+            "team",
+            "org",
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "validation_error",
+                    "message": (
+                        f"Unknown shape {payload.shape!r}; "
+                        "valid: individual / team / org"
+                    ),
+                },
+            )
+
+        try:
+            llm = state.llm_client_factory()
+        except LLMResolutionError as e:
+            raise HTTPException(
+                status_code=502,
+                detail={"error": "llm_resolution_error", "message": str(e)},
+            )
+
+        trace = SimpleNamespace(**trace_data)
+        chosen_mode = payload.mode or "standard"
+
+        with time_request(
+            surface="rest",
+            pattern="diagnose",
+            mode=chosen_mode,
+            registry=state.metrics,
+        ) as bucket:
+            try:
+                report = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        diagnose,
+                        trace,
+                        llm_client=llm,
+                        shape=payload.shape,
+                        patterns=list(payload.patterns) if payload.patterns else None,
+                        recipe=payload.recipe,
+                        mode=chosen_mode,
+                        cache=payload.cache,
+                    ),
+                    timeout=state.limits.request_timeout_seconds,
+                )
+                bucket["status"] = "ok"
+            except asyncio.TimeoutError:
+                bucket["status"] = "timeout"
+                raise HTTPException(
+                    status_code=504,
+                    detail={
+                        "error": "timeout",
+                        "message": (
+                            f"diagnose runner exceeded the "
+                            f"{state.limits.request_timeout_seconds:.0f}s "
+                            "server-side deadline. Try mode=quick, narrow "
+                            "the pattern list, or split the trace."
+                        ),
+                    },
+                )
+            except Exception as e:  # noqa: BLE001 — runtime runner failure
+                bucket["status"] = "runner_error"
+                logger.exception("vstack-api: diagnose runner failed")
+                raise HTTPException(
+                    status_code=502,
+                    detail={"error": "runner_error", "message": str(e)},
+                )
+
+        findings = report.findings
+        if payload.top is not None:
+            findings = findings[: payload.top]
+
+        cache_stats: DiagnoseCacheStats | None = None
+        if report.cache_stats is not None:
+            cache_stats = DiagnoseCacheStats(
+                hits=report.cache_stats.hits,
+                misses=report.cache_stats.misses,
+                inserts=report.cache_stats.inserts,
+                hit_rate=report.cache_stats.hit_rate,
+            )
+
+        return DiagnoseResponseEnvelope(
+            shape=report.shape,
+            findings=[
+                DiagnoseFinding(
+                    pattern=f.pattern,
+                    severity=f.severity,
+                    title=f.title,
+                    evidence=f.evidence,
+                    intervention=f.intervention,
+                )
+                for f in findings
+            ],
+            per_pattern=[
+                DiagnosePerPatternSummary(
+                    pattern=pr.pattern,
+                    n_findings=len(pr.findings),
+                    elapsed_seconds=pr.elapsed_seconds,
+                    error=pr.error,
+                )
+                for pr in report.per_pattern
+            ],
+            errors=dict(report.errors),
+            cost=DiagnoseCostSummary(
+                llm_calls=report.cost.llm_calls,
+                input_tokens=report.cost.input_tokens,
+                output_tokens=report.cost.output_tokens,
+                total_tokens=report.cost.total_tokens,
+                elapsed_ms=report.cost.elapsed_ms,
+                by_pattern=report.cost.by_pattern,
+                by_model=report.cost.by_model,
+            ),
+            cache_stats=cache_stats,
         )
 
     return app

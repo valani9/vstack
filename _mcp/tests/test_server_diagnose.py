@@ -24,10 +24,9 @@ import asyncio
 import json
 import sys
 import types
-from typing import Any
 
 import pytest
-from mcp.types import CallToolRequest, CallToolRequestParams, ListToolsRequest
+from mcp.types import ListToolsRequest
 
 from vstack.diagnose.registry import PatternInfo
 from vstack.mcp._server import (
