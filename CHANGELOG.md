@@ -6,6 +6,53 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.13.0] — 2026-06-08
+
+Prompt-engineering uplift pass, starting with Lencioni #17. Each prompt
+in the pattern now ships an explicit OUTPUT SCHEMA block, a one-shot
+example of a good answer, "DO NOT" rules covering the most common
+failure modes, and a seven-level severity calibration table on the
+system prompt. The wire format is unchanged.
+
+### Changed
+
+- `vstack.lencioni` (module 17): rewrote `prompts.py` for all six
+  templates (`PYRAMID_SCORE_PROMPT`, `INTERVENTIONS_PROMPT`,
+  `QUICK_DIAGNOSTIC_PROMPT`, `FORENSIC_CASCADE_PROMPT`,
+  `FORENSIC_PSYCH_SAFETY_PROMPT`, `FORENSIC_INTERVENTIONS_PROMPT`).
+  Public template constant names and `{placeholder}` fields are
+  unchanged; `assemble_prompt` semantics are unchanged. Downstream
+  callers see no API break.
+- `LENCIONI_SYSTEM_PROMPT` now defines a seven-level severity
+  calibration anchored in score bands (none / trace / low / moderate /
+  medium / high / critical) and lists explicit anti-pattern rules
+  (no invented quotes, no invented citations, no refusals on thin
+  traces).
+- Each task prompt now ships a literal OUTPUT SCHEMA block, so the
+  LLM does not have to reverse-engineer the JSON shape from a
+  one-line "return JSON" hint.
+- `PYRAMID_SCORE_PROMPT` ships a one-shot example demonstrating good
+  severity calibration plus two distinct verbatim evidence quotes.
+
+### Why
+
+The 0.10–0.12 releases gave the pattern bundle a runner, cost
+tracking, and a shared cache. Pattern quality at the prompt layer was
+the next ceiling on the diagnose pipeline's signal-to-noise ratio.
+Lencioni is the first pattern to receive the lift; AAR, Lewin, Bias
+Stack, Psych Safety, Trust Triangle, Process Gain/Loss, Debate
+Pathology, Devil's Advocate, and Yerkes-Dodson follow on the same
+template.
+
+### Compatibility
+
+- All 44 Lencioni tests pass unchanged.
+- All 84 `vstack.diagnose` tests pass unchanged (the runner
+  reflectively introspects analyzer output; prompt-text changes do
+  not affect the runner contract).
+- Wire format of the LLM output (DysfunctionEvidence severity values
+  are still high/medium/low/none) is preserved for downstream tooling.
+
 ## [0.12.0] — 2026-06-08
 
 Shared LLM-response cache across patterns in one `diagnose()` run.
