@@ -45,6 +45,7 @@ from .registry import (
     resolve_pattern,
 )
 from .runner import (
+    CostSummary,
     DiagnoseReport,
     Finding,
     PatternResult,
@@ -58,6 +59,7 @@ __all__ = [
     "RECIPES",
     "Recipe",
     "TraceShape",
+    "CostSummary",
     "DiagnoseReport",
     "Finding",
     "PatternResult",

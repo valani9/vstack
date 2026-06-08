@@ -96,19 +96,51 @@ class PatternResult:
 
 
 @dataclass
+class CostSummary:
+    """Aggregate token + latency stats collected during one ``diagnose()``
+    run.
+
+    Populated by the runner from the telemetry events that participating
+    patterns emit. Patterns that don't emit telemetry simply don't
+    contribute, and the summary still reflects the patterns that did.
+
+    Fields
+    ------
+    llm_calls: total number of LLM calls observed across the bundle.
+    input_tokens / output_tokens / total_tokens: token totals.
+    elapsed_ms: cumulative LLM latency in milliseconds.
+    by_pattern: per-pattern breakdown for tooling. Each entry has
+        the same field names (minus ``by_pattern``).
+    by_model: per-model breakdown. Useful when one bundle hits multiple
+        providers / model tiers.
+    """
+
+    llm_calls: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    elapsed_ms: float = 0.0
+    by_pattern: dict[str, dict[str, float]] = field(default_factory=dict)
+    by_model: dict[str, dict[str, float]] = field(default_factory=dict)
+
+
+@dataclass
 class DiagnoseReport:
     """The cross-pattern report ``diagnose()`` returns.
 
     Field ``per_pattern`` preserves the order in which patterns ran.
     Field ``findings`` is the merged + ranked view (highest severity
     first) and is what most users will read. ``errors`` lists pattern
-    failures by pattern name with the exception message.
+    failures by pattern name with the exception message. ``cost`` is
+    a :class:`CostSummary` aggregating LLM-call telemetry; populated
+    when participating patterns emit telemetry events, empty otherwise.
     """
 
     shape: str
     per_pattern: list[PatternResult] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     errors: dict[str, str] = field(default_factory=dict)
+    cost: CostSummary = field(default_factory=CostSummary)
 
     def top(self, k: int = 5) -> list[Finding]:
         """Return the top-k findings by severity rank."""
@@ -138,6 +170,25 @@ class DiagnoseReport:
                     lines.append(f"   - evidence: {f.evidence}")
                 if f.intervention:
                     lines.append(f"   - intervention: {f.intervention}")
+            lines.append("")
+        if self.cost.llm_calls > 0:
+            lines.append("## Cost summary")
+            lines.append(
+                f"- {self.cost.llm_calls} LLM call(s); "
+                f"{self.cost.input_tokens} in / "
+                f"{self.cost.output_tokens} out tokens "
+                f"({self.cost.total_tokens} total); "
+                f"{self.cost.elapsed_ms:.0f} ms cumulative latency."
+            )
+            if self.cost.by_pattern:
+                lines.append("")
+                lines.append("### By pattern")
+                for name, stats in self.cost.by_pattern.items():
+                    lines.append(
+                        f"- `{name}`: {int(stats['llm_calls'])} call(s), "
+                        f"{int(stats['total_tokens'])} tok, "
+                        f"{stats['elapsed_ms']:.0f} ms"
+                    )
             lines.append("")
         if self.errors:
             lines.append("## Pattern errors")
@@ -447,6 +498,7 @@ def diagnose(
     overrides = dict(analyzer_kwargs or {})
 
     report = DiagnoseReport(shape=inferred_shape)
+    sink, restore_sink = _install_telemetry_sink()
     for info in bundle:
         result = PatternResult(pattern=info.name, info=info)
         try:
@@ -484,6 +536,8 @@ def diagnose(
         report.per_pattern.append(result)
 
     _merge_and_rank(report)
+    _aggregate_cost(report, sink)
+    restore_sink()
     return report
 
 
@@ -551,13 +605,18 @@ async def diagnose_async(
                 result.error = str(exc)
         return result
 
-    tasks = [_run_one(info) for info in bundle]
-    per_pattern = await asyncio.gather(*tasks)
+    sink, restore_sink = _install_telemetry_sink()
+    try:
+        tasks = [_run_one(info) for info in bundle]
+        per_pattern = await asyncio.gather(*tasks)
+    finally:
+        restore_sink()
     report.per_pattern = list(per_pattern)
     for r in report.per_pattern:
         if r.error:
             report.errors[r.pattern] = r.error
     _merge_and_rank(report)
+    _aggregate_cost(report, sink)
     return report
 
 
@@ -576,3 +635,91 @@ def _merge_and_rank(report: DiagnoseReport) -> None:
         )
     )
     report.findings = flat
+
+
+def _install_telemetry_sink() -> tuple[Any, Callable[[], None]]:
+    """Install an in-memory telemetry sink for the duration of one
+    diagnose call. Returns the sink + a restore callable that the
+    caller invokes when the run is done.
+
+    Importing the telemetry layer is best-effort; older installs that
+    pre-date :mod:`vstack.aar._telemetry` will get a no-op sink that
+    silently swallows events. The diagnose() flow still works in that
+    case, the cost summary just stays empty.
+    """
+    try:
+        from vstack.aar import (  # type: ignore[attr-defined]
+            InMemoryTelemetrySink,
+            get_default_sink,
+            set_default_sink,
+        )
+    except ImportError:
+        class _Stub:
+            events: list[Any] = []
+        return _Stub(), lambda: None
+
+    previous = get_default_sink()
+    sink = InMemoryTelemetrySink()
+    set_default_sink(sink)
+
+    def _restore() -> None:
+        set_default_sink(previous)
+
+    return sink, _restore
+
+
+def _aggregate_cost(report: DiagnoseReport, sink: Any) -> None:
+    """Aggregate telemetry events from ``sink`` into the report's
+    cost summary. Designed to never raise: any malformed event is
+    silently skipped. A patternless event (one without
+    ``event.pattern`` set) contributes to the totals but not to the
+    per-pattern breakdown.
+    """
+    events = getattr(sink, "events", None) or []
+    summary = report.cost
+    for event in events:
+        if getattr(event, "event_type", None) != "llm_call":
+            continue
+        in_t = int(getattr(event, "input_tokens", 0) or 0)
+        out_t = int(getattr(event, "output_tokens", 0) or 0)
+        tot_t = int(getattr(event, "total_tokens", 0) or 0) or (in_t + out_t)
+        elapsed = float(getattr(event, "elapsed_ms", 0.0) or 0.0)
+        summary.llm_calls += 1
+        summary.input_tokens += in_t
+        summary.output_tokens += out_t
+        summary.total_tokens += tot_t
+        summary.elapsed_ms += elapsed
+        pattern = getattr(event, "pattern", None)
+        if pattern:
+            bucket = summary.by_pattern.setdefault(
+                pattern,
+                {
+                    "llm_calls": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "total_tokens": 0,
+                    "elapsed_ms": 0.0,
+                },
+            )
+            bucket["llm_calls"] = float(bucket["llm_calls"]) + 1
+            bucket["input_tokens"] = float(bucket["input_tokens"]) + in_t
+            bucket["output_tokens"] = float(bucket["output_tokens"]) + out_t
+            bucket["total_tokens"] = float(bucket["total_tokens"]) + tot_t
+            bucket["elapsed_ms"] = float(bucket["elapsed_ms"]) + elapsed
+        model = getattr(event, "model", None)
+        if model:
+            bucket = summary.by_model.setdefault(
+                model,
+                {
+                    "llm_calls": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "total_tokens": 0,
+                    "elapsed_ms": 0.0,
+                },
+            )
+            bucket["llm_calls"] = float(bucket["llm_calls"]) + 1
+            bucket["input_tokens"] = float(bucket["input_tokens"]) + in_t
+            bucket["output_tokens"] = float(bucket["output_tokens"]) + out_t
+            bucket["total_tokens"] = float(bucket["total_tokens"]) + tot_t
+            bucket["elapsed_ms"] = float(bucket["elapsed_ms"]) + elapsed

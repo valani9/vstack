@@ -6,6 +6,42 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.11.0] — 2026-06-08
+
+Cost tracking in `vstack.diagnose`. The runner now installs an
+in-memory telemetry sink for the duration of each `diagnose()` call
+and aggregates LLM-call events into a `CostSummary` attached to the
+report.
+
+### Added
+
+- `vstack.diagnose.CostSummary` dataclass: aggregate token + latency
+  stats with per-pattern and per-model breakdowns.
+- `DiagnoseReport.cost`: populated automatically when participating
+  analyzers emit telemetry via `vstack.aar.record_llm_call`.
+- `DiagnoseReport.to_markdown()` renders a `## Cost summary` section
+  when `cost.llm_calls > 0` (skipped silently otherwise).
+- The previously-installed telemetry sink is restored after the run,
+  so callers who had their own sink installed see no global-state
+  mutation.
+
+### Tests
+
+- 5 new tests in `_diagnose/tests/test_diagnose_cost.py`:
+  - empty cost summary when no telemetry
+  - aggregation across multiple emitting analyzers
+  - per-pattern and per-model breakdowns
+  - sink restoration after the run
+  - Markdown render gated by `cost.llm_calls`
+- Total `_diagnose` suite: 76 passing.
+- Full repository suite: 2173 passing, 1 skipped (crewai).
+
+### Compatibility
+
+- Patterns that don't emit telemetry contribute nothing to the cost
+  summary; the report's other fields are unchanged.
+- All existing imports continue to work.
+
 ## [0.10.0] — 2026-06-08
 
 Named recipes layer for `vstack.diagnose`. Until now, callers had to
