@@ -30,6 +30,11 @@ pattern's own sub-package.
 
 from __future__ import annotations
 
+from .adapters import (
+    ADAPTERS,
+    extract_findings,
+    register as register_adapter,
+)
 from .cache import CachingClientStats, CachingLLMClient
 from .recipes import (
     RECIPES,
@@ -55,6 +60,7 @@ from .runner import (
 )
 
 __all__ = [
+    "ADAPTERS",
     "PATTERNS",
     "PatternInfo",
     "RECIPES",
@@ -68,9 +74,11 @@ __all__ = [
     "PatternResult",
     "diagnose",
     "diagnose_async",
+    "extract_findings",
     "iter_bundle",
     "list_recipes",
     "patterns_for_recipe",
     "recipe_for_trigger",
+    "register_adapter",
     "resolve_pattern",
 ]

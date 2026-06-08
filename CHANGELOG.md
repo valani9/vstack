@@ -6,6 +6,93 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.16.0] — 2026-06-08
+
+Lossless per-pattern findings extraction in `vstack.diagnose`.
+
+The old `_coerce_findings` reflective normalizer only recognized the
+generic `findings` and `top_findings` attribute names. Almost no real
+vstack pattern exposes either of those, so the runner fell back to
+the score-only path and surfaced exactly ONE `Finding` per pattern
+run. That was lossy: a real Lencioni report has FIVE dysfunction
+evidence entries; a Bias Stack run has FOUR bias scores; an AAR run
+has 1-5 lessons. Each should land as its own ranked finding.
+
+### Added
+
+- `vstack.diagnose.adapters` module with a smart `extract_findings`
+  function that walks the field-name inventory vstack patterns
+  actually use:
+  - 47 evidence-list field names (`dysfunctions`, `legs`, `domains`,
+    `factors`, `triggers`, `strengths`, `pathologies`, `quadrants`,
+    `behaviors`, `loci`, `terms`, `traps`, `needs`, `biases`,
+    `characteristics`, `dimensions`, `phases`, `zones`, `styles`,
+    `metrics`, `lessons`, `branches`, plus `_evidence`-suffix
+    variants and collection accessors).
+  - 24 categorical-title field names so per-item titles populate
+    correctly from the pattern-specific axis name (`dysfunction`,
+    `leg`, `factor`, `quadrant`, `behavior`, etc.).
+  - 6 severity field names (`severity`, `severity_of_gap`,
+    `severity_of_absence`, `severity_of_overuse`, `mismatch_severity`,
+    `risk`) so per-pattern severity wire formats normalize to the
+    canonical 7-point scale.
+  - 9 score field names (`score`, `weight`, `presence_score`,
+    `wobble_score`, `overuse_score`, `observed_score`, `fit_score`,
+    `substantive_score`, `value`, `coherence_score`) used when
+    severity is absent and we need to derive one.
+- `vstack.diagnose.register_adapter` decorator for registering
+  per-pattern override adapters when the smart extractor's
+  conventions do not fit a pattern's schema.
+- `vstack.diagnose.ADAPTERS` dispatch table exposing the registered
+  overrides.
+- Built-in AAR override adapter: `Lesson` carries no severity field
+  by design (it is a narrative finding, not scored evidence), so the
+  override emits each Lesson as a `moderate`-severity Finding with
+  pattern slug + description in the title and root_cause + framework
+  anchor in evidence.
+
+### Changed
+
+- `vstack.diagnose.runner` now delegates findings extraction to
+  `extract_findings` from the adapters module. The legacy private
+  name `_coerce_findings` is preserved as an alias for backward
+  compatibility.
+- `Finding` is now defined in `vstack.diagnose.adapters` (was
+  previously in `runner`); it is re-exported from `runner` and from
+  the top-level `vstack.diagnose` package so all import paths
+  continue to work.
+- `_score_to_severity` band boundaries tightened to match the
+  seven-band calibration the prompt-engineering pass standardized
+  on (0.10/0.25/0.40/0.55/0.70/0.85 thresholds).
+
+### Tests
+
+- 14 new tests in `_diagnose/tests/test_diagnose_adapters.py`
+  covering:
+  - Multi-finding extraction from `dysfunctions` (5), `biases` (4),
+    `lessons` (2) shapes.
+  - Pattern-specific severity field name normalization
+    (`severity_of_gap`, `severity_of_absence`).
+  - Per-pattern adapter override precedence.
+  - Override-raises-fall-through-to-smart graceful degradation.
+  - Backward compatibility with legacy `findings=[...]` lists and
+    `top_findings` alias.
+  - Score-only fallback path.
+  - Severity-and-title-at-top-level fallback path.
+  - None / empty-list / vague-item edge cases.
+
+### Compatibility
+
+- All 2,195 tests pass (1 skipped: crewai adapter, extra not
+  installed in dev). This is 14 new tests on top of the 2,181 from
+  v0.15.0.
+- `Finding`, `extract_findings`, `_coerce_findings`, `ADAPTERS`,
+  `register_adapter` are all importable from `vstack.diagnose`
+  AND from `vstack.diagnose.runner` (where applicable) for
+  backward-compat.
+- Wire format of every analyzer's LLM output is unchanged. Only
+  the runner-side extraction logic was lifted.
+
 ## [0.15.0] — 2026-06-08
 
 Prompt-engineering uplift pass COMPLETE — every shipped pattern (34

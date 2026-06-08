@@ -38,6 +38,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Sequence
 
+from .adapters import Finding, extract_findings
 from .registry import (
     ALL_SHAPES,
     DEFAULT_BUNDLES,
@@ -52,29 +53,9 @@ from .registry import (
 log = logging.getLogger("vstack.diagnose")
 
 
-# --- output schema ----------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Finding:
-    """A single ranked finding extracted from one pattern's output.
-
-    Severity is one of the seven-point labels from
-    :data:`vstack.diagnose.registry.SEVERITY_ORDER`. ``evidence`` is a
-    short free-text quote or summary from the underlying pattern result;
-    ``intervention`` is the recommended next-step phrasing that pattern
-    would suggest. Both are optional because different patterns
-    emit different richness.
-    """
-
-    pattern: str
-    severity: str
-    title: str
-    evidence: str = ""
-    intervention: str = ""
-
-    def severity_rank(self) -> int:
-        return severity_rank(self.severity)
+# Finding is defined in adapters.py to avoid a circular import; it is
+# re-exported from this module so existing callers continue to work
+# (``from vstack.diagnose.runner import Finding``).
 
 
 @dataclass
@@ -210,152 +191,18 @@ class DiagnoseReport:
 
 # --- normalization ----------------------------------------------------
 
-# Reflect-on-common-shapes normalization. Patterns that expose
-# different return objects all converge here. We deliberately do not
-# break on missing attributes; an unmappable result becomes a single
-# "ran clean / no actionable finding" entry rather than an error.
+# Findings extraction is delegated to :mod:`vstack.diagnose.adapters`.
+# The runner used to ship its own reflective ``_coerce_findings`` that
+# only knew about the generic ``findings`` / ``top_findings`` attribute
+# names; that was lossy for most patterns (Lencioni's five dysfunctions
+# collapsed to one Finding, etc.). The smart extractor in adapters.py
+# walks the pattern-specific field-name inventory, then per-item field
+# names, surfacing all N evidence items as their own Findings.
+#
+# A backward-compatible alias for the old name is preserved below so
+# external code that imported ``_coerce_findings`` still works.
 
-
-def _coerce_findings(pattern: str, result: Any) -> list[Finding]:
-    """Best-effort extraction of one or more Finding rows from any
-    pattern result object. Returns an empty list when the pattern
-    declined to surface anything actionable (e.g., score below floor).
-
-    The reflection logic looks for any of the following attribute
-    names, in order:
-      - ``findings`` (preferred; iterable of dicts/objects with
-        ``severity`` + ``title`` keys)
-      - ``top_findings`` (list of strings/dicts)
-      - ``severity`` + ``title`` on the result itself
-      - ``score`` + a textual summary; we map score -> severity via
-        the ``score_to_severity`` helper
-      - last-resort: the result's repr, with severity ``trace``
-    """
-    if result is None:
-        return []
-
-    # Case A: explicit findings list
-    candidates = getattr(result, "findings", None) or getattr(
-        result, "top_findings", None
-    )
-    if candidates:
-        out: list[Finding] = []
-        for raw in candidates:
-            if isinstance(raw, Finding):
-                out.append(raw)
-                continue
-            # dict-like
-            if isinstance(raw, dict):
-                out.append(
-                    Finding(
-                        pattern=pattern,
-                        severity=str(
-                            raw.get("severity") or raw.get("level") or "trace"
-                        ),
-                        title=str(
-                            raw.get("title") or raw.get("name") or raw.get("label") or ""
-                        ),
-                        evidence=str(raw.get("evidence") or raw.get("quote") or ""),
-                        intervention=str(
-                            raw.get("intervention") or raw.get("next_step") or ""
-                        ),
-                    )
-                )
-                continue
-            # object-like
-            out.append(
-                Finding(
-                    pattern=pattern,
-                    severity=str(getattr(raw, "severity", "trace")),
-                    title=str(
-                        getattr(raw, "title", None)
-                        or getattr(raw, "name", None)
-                        or getattr(raw, "label", "")
-                    ),
-                    evidence=str(
-                        getattr(raw, "evidence", "") or getattr(raw, "quote", "")
-                    ),
-                    intervention=str(
-                        getattr(raw, "intervention", "")
-                        or getattr(raw, "next_step", "")
-                    ),
-                )
-            )
-        return out
-
-    # Case B: result itself has severity + title
-    sev = getattr(result, "severity", None)
-    title = (
-        getattr(result, "title", None)
-        or getattr(result, "summary", None)
-        or getattr(result, "description", None)
-    )
-    if sev and title:
-        return [
-            Finding(
-                pattern=pattern,
-                severity=str(sev),
-                title=str(title),
-                evidence=str(getattr(result, "evidence", "")),
-                intervention=str(
-                    getattr(result, "intervention", "")
-                    or getattr(result, "next_step", "")
-                ),
-            )
-        ]
-
-    # Case C: numeric score, derive severity
-    score = getattr(result, "score", None)
-    if score is not None:
-        return [
-            Finding(
-                pattern=pattern,
-                severity=_score_to_severity(score),
-                title=str(
-                    getattr(result, "summary", None)
-                    or getattr(result, "description", None)
-                    or f"score={score}"
-                ),
-                evidence=str(getattr(result, "evidence", "")),
-                intervention=str(getattr(result, "intervention", "")),
-            )
-        ]
-
-    # Case D: nothing actionable, but we ran. Drop, don't error.
-    return []
-
-
-def _score_to_severity(score: Any) -> str:
-    """Map a numeric pattern score to a 7-point severity label. The
-    convention across vstack patterns is that higher = worse for
-    "deficit / dysfunction / risk" scores, but some patterns invert it
-    (1=very inaccurate ... 7=very accurate, etc.). When in doubt we
-    default to treating the absolute distance from 0.5 as the severity
-    on a 0-1 scale, which is conservative but always defensible.
-    """
-    try:
-        s = float(score)
-    except (TypeError, ValueError):
-        return "trace"
-    # Heuristic: if the value looks like a 0-1 axis use it directly,
-    # if it's 0-10 normalize to 0-1, if it's 0-100 normalize too.
-    if 0.0 <= s <= 1.0:
-        norm = s
-    elif s <= 10.0:
-        norm = s / 10.0
-    else:
-        norm = max(0.0, min(1.0, s / 100.0))
-    if norm < 0.15:
-        return "trace"
-    if norm < 0.30:
-        return "low"
-    if norm < 0.50:
-        return "moderate"
-    if norm < 0.70:
-        return "medium"
-    if norm < 0.90:
-        return "high"
-    return "critical"
+_coerce_findings = extract_findings
 
 
 # --- pattern execution ------------------------------------------------
