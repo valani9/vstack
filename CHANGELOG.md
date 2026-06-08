@@ -6,6 +6,74 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.14.0] — 2026-06-08
+
+Prompt-engineering uplift pass — top 10 patterns completed.
+
+The uplift template (introduced in 0.13.0 on Lencioni) has now been
+applied uniformly across the ten highest-leverage patterns. Each
+pattern's `prompts.py` now ships:
+
+  1. An explicit **OUTPUT SCHEMA block** with the literal JSON shape
+     the generator parses, so the LLM does not have to
+     reverse-engineer the schema from a one-line "return JSON" hint.
+  2. A **one-shot example** of a well-calibrated answer demonstrating
+     verbatim evidence quotation and named-source anchoring.
+  3. **`DO NOT` rules** covering the most common failure modes
+     (invented quotes, name-dropped citations without anchoring,
+     vague interventions, schema-violating labels, scope creep
+     between phases).
+  4. **Severity calibration anchors** tied to score bands (where the
+     pattern uses numeric scoring), mapped down to the wire-format
+     severity labels.
+  5. **Canonical ordering rules** so downstream parsers do not have
+     to reorder arrays.
+
+### Patterns uplifted in this release
+
+| #  | Pattern            | Anchor literature                            |
+|----|--------------------|----------------------------------------------|
+| 1  | Lewin Formula      | Lewin 1936; Kelley 1967; Cemri et al. 2025  |
+| 6  | Yerkes-Dodson      | Yerkes-Dodson 1908; Sweller; Liu et al. 2024|
+| 14 | Process Gain/Loss  | Steiner 1972; Hill 1982; Diehl & Stroebe    |
+| 17 | Lencioni Diagnostic| Lencioni 2002 + 2005; Edmondson 1999        |
+| 18 | Trust Triangle     | Frei & Morriss 2020                          |
+| 20 | Psych Safety       | Edmondson 1999, 2018                         |
+| 26 | Debate Pathology   | Janis 1972; Stoner 1968; Hatfield et al.    |
+| 27 | Bias Stack         | Kahneman/Tversky 1974, 1979, 2011; Staw 1976|
+| 28 | Devil's Advocate   | Janis 1972; Schwenk 1990                     |
+| 30 | AAR Generator      | Wharton; US Army TC 25-20; Edmondson 1999    |
+
+### Changed
+
+- Every `prompts.py` file across the ten patterns above. Public
+  template constant names and `{placeholder}` fields are unchanged;
+  `assemble_prompt` semantics are unchanged; all downstream callers
+  see no API break.
+- System prompts now ship explicit posture rules, anti-pattern
+  instructions, severity calibration tables, and per-category
+  symptom signatures so the LLM has a consistent grounding across
+  modes (quick / standard / forensic).
+
+### Why
+
+The 0.10–0.12 releases shipped the cross-pattern runner, cost
+tracking, and shared LLM-response cache for the diagnose pipeline.
+Pattern quality at the prompt layer was the next ceiling on
+signal-to-noise. This release closes that gap across the top ten
+patterns by leverage; the remaining 24 patterns will receive the
+same lift on the same template in future releases.
+
+### Compatibility
+
+- All 2,181 tests pass unchanged (1 skipped: crewai adapter, extra
+  not installed in dev).
+- Wire format of every analyzer's LLM output is preserved for
+  downstream tooling.
+- Public template constant names and `{placeholder}` field sets are
+  unchanged.
+- `assemble_prompt` semantics are unchanged across all ten patterns.
+
 ## [0.13.0] — 2026-06-08
 
 Prompt-engineering uplift pass, starting with Lencioni #17. Each prompt
