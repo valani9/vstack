@@ -6,6 +6,67 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.17.0] — 2026-06-08
+
+`vstack_diagnose` cross-pattern MCP tool.
+
+The MCP server already exposed one tool per pattern
+(`vstack_lewin`, `vstack_lencioni`, ... 34 tools). Callers who knew
+*which* pattern to run were well served, but the "I have a
+misbehaving agent and do not yet know where to start" case still
+required reading the catalogue and picking a tool manually.
+
+This release adds `vstack_diagnose` as a 35th MCP tool that wraps
+`vstack.diagnose.diagnose()` — the cross-pattern runner that infers
+trace shape, picks the default bundle, executes every pattern with
+per-pattern error isolation, and returns a severity-ranked findings
+report.
+
+### Added
+
+- `vstack.mcp._server.DIAGNOSE_TOOL_NAME = "vstack_diagnose"` constant.
+- `_build_diagnose_tool()` synthesizes the MCP Tool definition with
+  an opt-in input schema:
+  - `trace` (required): generic JSON object passed to the runner.
+  - `shape`: optional override of inferred trace shape.
+  - `recipe`: optional named recipe slug (mutually exclusive with
+    `patterns`).
+  - `patterns`: optional explicit list of pattern slugs.
+  - `mode`: `quick` / `standard` / `forensic`.
+  - `model`: LLM model identifier override.
+  - `cache`: opt-in shared-response cache wrapper.
+  - `top`: optional truncation of the ranked findings list.
+- `_dispatch_diagnose_call()` routes the request through
+  `vstack.diagnose.diagnose()`, with input validation guards for
+  unknown recipes, unknown patterns, and recipe/patterns mutual
+  exclusivity.
+- `_serialize_diagnose_report()` renders the DiagnoseReport as
+  indented JSON: shape, ranked findings, per-pattern summary,
+  errors, cost summary, optional cache stats.
+- 7 new tests in `_mcp/tests/test_server_diagnose.py` covering tool
+  listing, input schema shape, end-to-end dispatch with synthetic
+  patterns, and validation-error paths.
+
+### Changed
+
+- `_list_tools` now returns 35 tools (1 cross-pattern + 34
+  per-pattern) instead of 34.
+- The existing `test_list_tools_returns_all_patterns` assertion
+  updated to expect 35 tools and include `vstack_diagnose` in the
+  expected name set.
+
+### Compatibility
+
+- All 2,202 tests pass (1 skipped: crewai adapter, extra not
+  installed in dev). +7 new tests on top of v0.16.0's 2,195.
+- All 34 per-pattern tools' input schemas are unchanged.
+- MCP wire protocol unchanged; the new tool follows the same
+  `name` / `description` / `inputSchema` Tool shape as the existing
+  tools.
+- The cross-pattern runner is the same `vstack.diagnose.diagnose()`
+  function exposed in v0.10.0+; this release only adds the MCP
+  surface to it.
+
 ## [0.16.0] — 2026-06-08
 
 Lossless per-pattern findings extraction in `vstack.diagnose`.

@@ -65,11 +65,12 @@ def test_server_metadata(server) -> None:
 
 
 def test_list_tools_returns_all_patterns(server) -> None:
+    """34 per-pattern tools + 1 cross-pattern vstack_diagnose tool."""
     result = _invoke_handler(server, ListToolsRequest)
     tools = result.root.tools
-    assert len(tools) == 34
+    assert len(tools) == 35
     names = {t.name for t in tools}
-    expected = {tool_name_for(p) for p in PATTERNS}
+    expected = {tool_name_for(p) for p in PATTERNS} | {"vstack_diagnose"}
     assert names == expected
 
 

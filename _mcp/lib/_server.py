@@ -57,6 +57,11 @@ from ._prompts import render_prompt
 from ._registry import PATTERNS, PATTERNS_BY_NAME, PatternEntry, tool_name_for
 from ._resources import list_resource_uris, read_resource as read_vstack_resource
 
+# Cross-pattern tool name. Same prefix as the individual-pattern tools
+# (``vstack_<name>``) so MCP clients display it alongside them, but
+# routed through its own dispatcher.
+DIAGNOSE_TOOL_NAME = "vstack_diagnose"
+
 SERVER_NAME = "vstack-mcp"
 SERVER_VERSION = "0.2.0"
 SERVER_INSTRUCTIONS = (
@@ -95,10 +100,12 @@ def build_server() -> Server[None, Any]:
     # file's typing.
     @server.list_tools()  # type: ignore[untyped-decorator,no-untyped-call]
     async def _list_tools() -> list[Tool]:
-        return [_build_tool(p) for p in PATTERNS]
+        return [_build_diagnose_tool()] + [_build_tool(p) for p in PATTERNS]
 
     @server.call_tool()  # type: ignore[untyped-decorator]
     async def _call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+        if name == DIAGNOSE_TOOL_NAME:
+            return _dispatch_diagnose_call(arguments)
         return _dispatch_tool_call(name, arguments)
 
     @server.list_resources()  # type: ignore[untyped-decorator,no-untyped-call]
@@ -264,6 +271,254 @@ def _dispatch_tool_call(name: str, arguments: dict[str, Any]) -> list[TextConten
         else json.dumps(detection, default=str, indent=2)
     )
     return [TextContent(type="text", text=body)]
+
+
+def _build_diagnose_tool() -> Tool:
+    """Synthesize the cross-pattern ``vstack_diagnose`` MCP tool.
+
+    Unlike per-pattern tools (which take a pattern-specific trace
+    schema), ``vstack_diagnose`` accepts a generic trace object plus
+    bundle-selection knobs. The runner infers trace shape from
+    attribute presence (``steps`` -> individual, ``agents`` -> team,
+    ``org_chart`` -> org), or the caller can force a shape via the
+    ``shape`` parameter.
+    """
+    from vstack.diagnose import PATTERNS as DIAGNOSE_PATTERNS
+    from vstack.diagnose import RECIPES as DIAGNOSE_RECIPES
+
+    pattern_names = sorted(DIAGNOSE_PATTERNS.keys())
+    recipe_names = sorted(DIAGNOSE_RECIPES.keys())
+
+    trace_schema: dict[str, Any] = {
+        "type": "object",
+        "description": (
+            "Agent trace object. Fields are shape-dependent:\n"
+            "  individual: { goal, steps[], outcome, success, ... }\n"
+            "  team:       { goal, agents[], messages[], outcome, success, ... }\n"
+            "  org:        { org_chart | structure_matrix, ... }\n"
+            "Extra fields are passed through to the analyzers."
+        ),
+        "additionalProperties": True,
+    }
+
+    input_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "trace": trace_schema,
+            "shape": {
+                "type": "string",
+                "enum": ["individual", "team", "org"],
+                "description": (
+                    "Override the inferred trace shape. Omit to let "
+                    "the runner infer from the trace's attribute "
+                    "presence."
+                ),
+            },
+            "recipe": {
+                "type": "string",
+                "enum": recipe_names,
+                "description": (
+                    "Named recipe selecting a curated sub-bundle of "
+                    "patterns for a specific failure mode "
+                    "(e.g. 'stuck_in_loop', 'silent_failure'). "
+                    "Mutually exclusive with 'patterns'."
+                ),
+            },
+            "patterns": {
+                "type": "array",
+                "items": {"type": "string", "enum": pattern_names},
+                "description": (
+                    "Explicit list of pattern slugs to run. Overrides "
+                    "both 'recipe' and the default bundle when present."
+                ),
+            },
+            "mode": {
+                "type": "string",
+                "enum": ["quick", "standard", "forensic"],
+                "description": (
+                    "Pipeline mode forwarded to each analyzer that "
+                    "accepts a 'mode=' kwarg. Defaults to 'standard'."
+                ),
+            },
+            "model": {
+                "type": "string",
+                "description": (
+                    "LLM model identifier passed to analyzers' "
+                    "constructors. Defaults are auto-selected based "
+                    "on the resolved client."
+                ),
+            },
+            "cache": {
+                "type": "boolean",
+                "description": (
+                    "Wrap the LLM client in a shared response cache "
+                    "for the duration of the call. Patterns that hit "
+                    "identical prompts only pay once."
+                ),
+            },
+            "top": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50,
+                "description": (
+                    "Truncate the merged findings list to the top N "
+                    "by severity. Defaults to no truncation; the "
+                    "report still includes per-pattern raw results."
+                ),
+            },
+        },
+        "required": ["trace"],
+        "additionalProperties": False,
+    }
+
+    description = (
+        "Run a curated bundle of vstack patterns against one agent "
+        "trace and return a single ranked findings report.\n\n"
+        "Use this when you have a misbehaving agent and do not yet "
+        "know which pattern to invoke. The runner infers trace shape "
+        "(individual / team / org), picks the default bundle for that "
+        "shape, executes each pattern with per-pattern error "
+        "isolation, and merges the results into a severity-ranked "
+        "list of Findings.\n\n"
+        f"{len(pattern_names)} patterns and {len(recipe_names)} "
+        "named recipes available. Browse 'vstack://patterns/index' "
+        "for the catalogue or pass `recipe=<name>` to invoke a "
+        "specific failure-mode bundle."
+    )
+
+    return Tool(
+        name=DIAGNOSE_TOOL_NAME,
+        title="vstack.diagnose (cross-pattern runner)",
+        description=description,
+        inputSchema=input_schema,
+    )
+
+
+def _dispatch_diagnose_call(arguments: dict[str, Any]) -> list[TextContent]:
+    """Run :func:`vstack.diagnose.diagnose` and return the report as
+    indented JSON inside a single TextContent.
+    """
+    from types import SimpleNamespace
+
+    from vstack.diagnose import (
+        PATTERNS as DIAGNOSE_PATTERNS,
+        RECIPES as DIAGNOSE_RECIPES,
+        diagnose,
+    )
+
+    arguments = dict(arguments or {})
+    trace_data = arguments.get("trace")
+    if not isinstance(trace_data, dict):
+        return _error_response(
+            "'trace' must be a JSON object", kind="validation_error"
+        )
+
+    shape = arguments.get("shape")
+    recipe = arguments.get("recipe")
+    patterns_arg = arguments.get("patterns")
+    mode = arguments.get("mode") or "standard"
+    cache = bool(arguments.get("cache", False))
+    top_k = arguments.get("top")
+
+    if recipe and patterns_arg:
+        return _error_response(
+            "'recipe' and 'patterns' are mutually exclusive; pass one or the other",
+            kind="validation_error",
+        )
+    if recipe and recipe not in DIAGNOSE_RECIPES:
+        return _error_response(
+            f"Unknown recipe {recipe!r}; valid: {sorted(DIAGNOSE_RECIPES)}",
+            kind="validation_error",
+        )
+    if patterns_arg:
+        unknown = [p for p in patterns_arg if p not in DIAGNOSE_PATTERNS]
+        if unknown:
+            return _error_response(
+                f"Unknown patterns {unknown}; valid: {sorted(DIAGNOSE_PATTERNS)}",
+                kind="validation_error",
+            )
+
+    try:
+        llm = resolve_llm_client()
+    except LLMResolutionError as e:
+        return _error_response(str(e), kind="llm_resolution_error")
+
+    # Coerce the trace dict into a SimpleNamespace so the runner's
+    # attribute-based shape inference works. The runner walks
+    # ``trace.steps`` / ``trace.agents`` / ``trace.org_chart`` to pick
+    # a shape and the analyzers do their own pydantic validation.
+    trace = SimpleNamespace(**trace_data)
+
+    try:
+        report = diagnose(
+            trace,
+            llm_client=llm,
+            shape=shape,
+            patterns=list(patterns_arg) if patterns_arg else None,
+            recipe=recipe,
+            mode=mode,
+            cache=cache,
+        )
+    except Exception as e:  # noqa: BLE001 — runtime failure surfaced as JSON
+        logger.exception("vstack_diagnose runner failed")
+        return _error_response(f"Runner failed: {e}", kind="runner_error")
+
+    body = _serialize_diagnose_report(report, top_k=top_k)
+    return [TextContent(type="text", text=body)]
+
+
+def _serialize_diagnose_report(report: Any, *, top_k: Any = None) -> str:
+    """Render a DiagnoseReport as indented JSON.
+
+    We pull out the public-facing fields and skip the raw per-pattern
+    Pydantic detection objects (which the per-pattern tools already
+    expose). MCP clients see: shape + per-pattern summary +
+    ranked findings + errors + cost summary + (optional) cache stats.
+    """
+    findings = report.findings
+    if isinstance(top_k, int) and top_k > 0:
+        findings = findings[:top_k]
+
+    payload: dict[str, Any] = {
+        "shape": report.shape,
+        "findings": [
+            {
+                "pattern": f.pattern,
+                "severity": f.severity,
+                "title": f.title,
+                "evidence": f.evidence,
+                "intervention": f.intervention,
+            }
+            for f in findings
+        ],
+        "per_pattern": [
+            {
+                "pattern": pr.pattern,
+                "n_findings": len(pr.findings),
+                "elapsed_seconds": pr.elapsed_seconds,
+                "error": pr.error,
+            }
+            for pr in report.per_pattern
+        ],
+        "errors": dict(report.errors),
+        "cost": {
+            "llm_calls": report.cost.llm_calls,
+            "input_tokens": report.cost.input_tokens,
+            "output_tokens": report.cost.output_tokens,
+            "total_tokens": report.cost.total_tokens,
+            "elapsed_ms": report.cost.elapsed_ms,
+            "by_pattern": report.cost.by_pattern,
+            "by_model": report.cost.by_model,
+        },
+    }
+    if report.cache_stats is not None:
+        payload["cache_stats"] = {
+            "hits": report.cache_stats.hits,
+            "misses": report.cache_stats.misses,
+            "inserts": report.cache_stats.inserts,
+            "hit_rate": report.cache_stats.hit_rate,
+        }
+    return json.dumps(payload, indent=2, default=str)
 
 
 def _error_response(message: str, *, kind: str = "error") -> list[TextContent]:
