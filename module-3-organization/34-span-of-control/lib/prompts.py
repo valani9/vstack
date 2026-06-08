@@ -1,71 +1,60 @@
 """LLM prompts for the Span-of-Control / Centralization Calculator.
 
-v0.2.0:
-  - INTERVENTIONS_PROMPT (legacy + standard mode = 1 LLM call)
-  - FORENSIC_INTERVENTIONS_PROMPT (forensic mode = 1 LLM call after the
-    two deterministic forensic audits)
-  - QUICK_TOP_INTERVENTION_PROMPT (mode=quick is normally 0 LLM calls;
-    optionally use this prompt when caller wants a quick top fix)
-  - assemble_prompt(): fence + sanitize untrusted fields.
-
-Quick mode default = 0 LLM calls (metrics only).
-Standard mode = 1 LLM call (interventions only).
-Forensic mode = 3 LLM calls (anomaly explanation + load amplification
-explanation + interventions). The two forensic audits also rely on
-deterministic helpers in metrics.py so the LLM cannot move the numbers.
+0.15.0 uplift: OUTPUT SCHEMA literals + DO NOT rules + one-shot example.
+Wire format unchanged.
 """
 
 from __future__ import annotations
 
 from vstack.aar import fence, sanitize_for_prompt
 
-SPAN_SYSTEM_PROMPT = """You are an org-design intervention assistant operating in
-the tradition of Jay Galbraith's Star Model and Henry Mintzberg's structural
-configurations. You will be given six DETERMINISTICALLY-COMPUTED metrics on an
-AI agent crew's structure:
+SPAN_SYSTEM_PROMPT = """You are an org-design intervention assistant grounded in:
 
-  - max_span: widest supervisor span (>7 starts being problematic; >10 severe)
-  - mean_span: mean span across supervisors (>5 starts being heavy)
-  - centralization_index: fraction of decision authority concentrated in top
-    supervisors (>0.6 is concerning)
-  - hierarchy_depth: longest reports_to chain (>3 levels adds latency)
-  - span_gini: inequality across the span distribution (>0.4 is imbalanced)
-  - decision_bottleneck: composite of span + authority + incoming load
-    (>0.5 is a single-point-of-failure under load)
+  - **Galbraith (1977, 2014)** Star Model.
+  - **Mintzberg (1979, 1983)** Structure in Fives.
+  - **Hackman (2002)** Leading Teams.
 
-You DO NOT modify the metric values. They are computed deterministically. Your
-job is to:
-  1. Identify which metric has the highest normalized_score (worst signal)
-  2. Propose 2-4 concrete interventions targeted at that metric
-  3. Each intervention specifies a structural change: who reports to whom,
-     who has commit authority, where to insert / remove a layer.
+You will be given six DETERMINISTICALLY-COMPUTED metrics on an AI
+agent crew's structure:
+
+  - max_span               widest supervisor span (>7 problematic; >10 severe).
+  - mean_span              mean span across supervisors (>5 heavy).
+  - centralization_index   fraction of decision authority concentrated
+                           in top supervisors (>0.6 concerning).
+  - hierarchy_depth        longest reports_to chain (>3 adds latency).
+  - span_gini              inequality across the span distribution
+                           (>0.4 imbalanced).
+  - decision_bottleneck    composite of span + authority + incoming load
+                           (>0.5 single-point-of-failure under load).
+
+You DO NOT modify the metric values. They are computed deterministically.
 
 Metric-to-intervention mapping (use as a guide):
 
   - max_span or span_gini high:
       split_supervisor_load / redistribute_subordinates / add_supervisor_layer
-
   - centralization_index high or decision_bottleneck high:
       delegate_decision_authority / add_redundant_path /
       remove_bottleneck_agent
-
   - hierarchy_depth high:
       flatten_hierarchy / consolidate_supervisors
-
-  - mean_span low (everyone supervises 1-2 subordinates -> over-layered):
+  - mean_span low (everyone supervises 1-2 -> over-layered):
       flatten_hierarchy / consolidate_supervisors
 
-Your posture is:
-- METRIC-RESPECTFUL. Do not contradict the computed numbers.
-- TARGETED. Each intervention names the SPECIFIC metric it relieves.
-- CONCRETE. Implementation must specify which agents change roles / edges.
-- TERSE. Output is read on dashboards.
+Posture (absolute):
+- **METRIC-RESPECTFUL.** Do not contradict the computed numbers.
+- **TARGETED.** Each intervention names the SPECIFIC metric it relieves.
+- **CONCRETE.** Implementation must specify which agents change roles / edges.
+- **TERSE.** Output is read on dashboards.
 
-When asked for JSON, return JSON only. No prose around it, no markdown fences."""
+Output discipline: when asked for JSON, return JSON only. No prose, no markdown fences.
+"""
 
 
-INTERVENTIONS_PROMPT = """The crew below was diagnosed with the following metrics
-(values are DETERMINISTIC; do not change them):
+INTERVENTIONS_PROMPT = """STANDARD mode -- propose 2-4 structural interventions.
+
+The crew below was diagnosed with the following metrics (values are
+DETERMINISTIC; do not change them):
 
 {metrics_table}
 
@@ -76,38 +65,79 @@ Composite load score: {load_score}
 Roster snapshot:
 {roster}
 
-Propose 2-4 interventions targeting the worst-scoring metric(s). Each
-intervention must be a JSON object with these fields:
-  - target_metric: one of the six metric names
-  - intervention_type: one of "add_supervisor_layer", "flatten_hierarchy",
-    "split_supervisor_load", "delegate_decision_authority",
-    "consolidate_supervisors", "redistribute_subordinates",
-    "add_redundant_path", "remove_bottleneck_agent", "new_eval",
-    "human_review", "compose_pattern"
-  - description (1-2 sentences)
-  - suggested_implementation (concrete spec: which agents change roles / edges)
-  - estimated_impact ("high", "medium", "low")
-  - rationale (why this relieves the targeted metric)
-  - effort_estimate (one of "1h", "1d", "1w", "1m", "ongoing")
-  - risk (one of "low", "medium", "high")
+INSTRUCTIONS:
+- Target the worst-scoring metric(s) per the mapping in the system prompt.
+- ``suggested_implementation`` must name WHICH agents change roles or
+  reports_to edges (e.g., "agent_3 becomes supervisor of agent_7 and
+  agent_8; remove the edge agent_7 -> agent_2").
+- ``rationale`` cites Galbraith / Mintzberg.
 
-Return a JSON array of SpanIntervention objects. Return only the JSON array."""
+DO NOT:
+- Do not propose interventions that contradict the metrics (e.g.,
+  flatten_hierarchy when hierarchy_depth is already 1).
+- Do not propose vague "improve structure" interventions.
+- Do not return prose around the JSON.
+
+ALLOWED intervention_type values:
+  add_supervisor_layer, flatten_hierarchy, split_supervisor_load,
+  delegate_decision_authority, consolidate_supervisors,
+  redistribute_subordinates, add_redundant_path,
+  remove_bottleneck_agent, new_eval, human_review, compose_pattern
+
+OUTPUT SCHEMA (literal JSON array of SpanIntervention objects):
+[
+  {{
+    "target_metric": "max_span" | "mean_span" | "centralization_index" | "hierarchy_depth" | "span_gini" | "decision_bottleneck",
+    "intervention_type": "<from the allowed set>",
+    "description": "<1-2 sentences>",
+    "suggested_implementation": "<which agents change roles / edges>",
+    "estimated_impact": "high" | "medium" | "low",
+    "rationale": "<Galbraith / Mintzberg anchored>",
+    "effort_estimate": "1h" | "1d" | "1w" | "1m" | "ongoing",
+    "risk": "low" | "medium" | "high"
+  }},
+  ...
+]
+
+EXAMPLE (max_span = 11 triage: split_supervisor_load with concrete edge changes):
+{{
+  "target_metric": "max_span",
+  "intervention_type": "split_supervisor_load",
+  "description": "Split supervisor_A's 11-subordinate span into two ~5-subordinate spans by introducing supervisor_B as a lieutenant.",
+  "suggested_implementation": "Promote agent_4 to supervisor_B; redirect reports_to of agents 7-11 from supervisor_A to supervisor_B; supervisor_B reports to supervisor_A. Span drops from 11 to 6 + 5 + 1.",
+  "estimated_impact": "high",
+  "rationale": "Mintzberg 1983 + Galbraith Star Model: spans > 10 fail coordination tasks; the split halves coordination load while preserving the single line of escalation supervisor_A holds.",
+  "effort_estimate": "1d",
+  "risk": "low"
+}}
+
+Return only the JSON array.
+"""
 
 
-QUICK_TOP_INTERVENTION_PROMPT = """Quick-mode top intervention.
+QUICK_TOP_INTERVENTION_PROMPT = """QUICK mode -- single top intervention.
 
 Metrics (DETERMINISTIC):
 {metrics_table}
 
 Bottleneck agent_ids: {bottleneck_ids}
 
-Return a SINGLE JSON OBJECT representing ONE SpanIntervention with the same
-schema as INTERVENTIONS_PROMPT entries. Return only the JSON object."""
+INSTRUCTIONS:
+- Return one SpanIntervention targeted at the worst-scoring metric.
+- Same schema as a single entry in INTERVENTIONS_PROMPT.
+
+DO NOT:
+- Do not return multiple interventions.
+- Do not contradict the metric values.
+
+OUTPUT SCHEMA (literal JSON object): single SpanIntervention with the
+same field set as INTERVENTIONS_PROMPT entries.
+
+Return only the JSON object.
+"""
 
 
-FORENSIC_INTERVENTIONS_PROMPT = """Forensic-mode interventions. Use the structural
-anomaly audit + load amplification audit to propose 3-6 interventions ranked
-by (severity x leverage).
+FORENSIC_INTERVENTIONS_PROMPT = """FORENSIC mode -- propose 3-6 interventions ranked by (severity x leverage).
 
 Metrics (DETERMINISTIC):
 {metrics_table}
@@ -121,7 +151,17 @@ Load amplification audit:
 Bottleneck agent_ids: {bottleneck_ids}
 Load quality: {load_quality}
 
-Same intervention schema as INTERVENTIONS_PROMPT. Return only the JSON array."""
+INSTRUCTIONS:
+- Generate 3-6 interventions, ranked by severity x leverage.
+- Cite structural_anomaly + load_amplification findings in rationale.
+
+DO NOT:
+- Do not return fewer than 3 or more than 6 interventions.
+
+OUTPUT SCHEMA: same as INTERVENTIONS_PROMPT.
+
+Return only the JSON array.
+"""
 
 
 def assemble_prompt(
