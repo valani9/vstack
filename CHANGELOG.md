@@ -6,6 +6,48 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.35.0] — 2026-06-09
+
+Three more feature modules: alerting + eval_gates + intervention_tracker.
+Twenty-nine feature modules total since v0.23.0.
+
+### Added
+
+- **`vstack.alerting`** — multi-channel alert dispatcher. Pluggable
+  `AlertSink` protocol with built-in `SlackSink` (webhook payload
+  + severity emoji), `PagerDutySink` (Events API v2 + vstack→PD
+  severity mapping + dedup_key), `WebhookSink` (generic JSON POST),
+  `EmailSink` (RFC 5322 envelope), `ConsoleSink` (stdout),
+  `NullSink` (testing). `AlertDispatcher` fans out per-alert with
+  per-sink retries, severity floors that short-circuit retries, and
+  contextvar-based dry-run mode for tests. All sinks accept a
+  user-supplied `sender` callable so network I/O stays out of the
+  module's dependencies.
+- **`vstack.eval_gates`** — CI gate primitives. `Gate` protocol;
+  built-in gates: `SeverityCountGate` (max findings by severity),
+  `F1Gate` / `PrecisionGate` / `RecallGate` (eval metric floors),
+  `BaselineComparisonGate` (max new high findings + max overall-score
+  drop), `CustomGate` (user predicate). `GateSet.check()` evaluates
+  in order, captures gate exceptions as failures, returns
+  `GateResult` with `passed` flag + `exit_code()` for CI scripts.
+- **`vstack.intervention_tracker`** — track applied interventions +
+  outcomes. `InterventionTracker` records remediations with the
+  finding snapshot that triggered them. `InterventionOutcome` enum:
+  PENDING / RESOLVED / PARTIAL / NO_EFFECT / REGRESSED / ROLLED_BACK.
+  Query by pattern / applied_by / pending / closed. `effectiveness_score()`
+  ranks interventions by efficacy (resolved = 1.0, partial = 0.5,
+  no_effect/regressed = 0); `rank_patterns_by_effectiveness()` surfaces
+  which patterns benefit most from intervention.
+
+### Changed
+
+- Test count: 2,931 → 3,014 (+83 from the three new modules).
+
+### Compatibility
+
+- All 3,014 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.34.0] — 2026-06-09
 
 Three more feature modules: timeline + cost_sim + findings_router.

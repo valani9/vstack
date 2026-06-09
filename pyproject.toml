@@ -1,6 +1,6 @@
 [project]
 name = "valanistack"
-version = "0.34.0"
+version = "0.35.0"
 description = "Organizational behavior, practiced on AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -240,6 +240,9 @@ only-include = []
 "_timeline/lib" = "vstack/timeline"
 "_cost_sim/lib" = "vstack/cost_sim"
 "_findings_router/lib" = "vstack/findings_router"
+"_alerting/lib" = "vstack/alerting"
+"_eval_gates/lib" = "vstack/eval_gates"
+"_intervention_tracker/lib" = "vstack/intervention_tracker"
 "module-2-team/30-aar-generator/lib" = "vstack/aar"
 "module-2-team/17-lencioni-diagnostic/lib" = "vstack/lencioni"
 "module-2-team/18-trust-triangle-audit/lib" = "vstack/trust_triangle"
@@ -337,6 +340,9 @@ testpaths = [
     "_timeline",
     "_cost_sim",
     "_findings_router",
+    "_alerting",
+    "_eval_gates",
+    "_intervention_tracker",
 ]
 addopts = "-ra --tb=short --strict-markers"
 filterwarnings = [
