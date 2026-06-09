@@ -6,6 +6,51 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.21.0] — 2026-06-09
+
+Per-pattern WALKTHROUGH gallery — 34 end-to-end recipe documents.
+
+### Added
+
+- **34 `WALKTHROUGH.md` files**, one per pattern, under each
+  `module-N-*/NN-name/WALKTHROUGH.md`. Each follows the same
+  consistent shape so users can jump from any pattern's README
+  to a runnable recipe pack without re-learning the structure:
+  - When-to-reach decision lens (signals it's the right pattern;
+    signals it's *not*).
+  - The framework's named structure (e.g. the four Goleman
+    domains, the five Lencioni dysfunctions, the seven Robbins-
+    Judge dimensions).
+  - Five concrete scenarios with `StubClient` code that runs
+    without LLM credentials. Each scenario names the trace
+    shape, the call site, the expected output, and the
+    intervention.
+  - CLI walkthrough for the pattern's console script.
+  - Composition chain naming the next pattern to run based on the
+    detected sub-pattern, with explicit links to the downstream
+    WALKTHROUGHs.
+  - Async fan-out snippet.
+  - Baseline drift detection snippet using the pattern's
+    `record_baseline` / `compare_to_baseline` helpers.
+  - Anti-patterns + FAQ + forensic-mode cost.
+  - Reference section linking the source, schema, prompts, demo,
+    tests, essay, and pattern README.
+- Total documentation surface added: ~10,000 LOC across the 34
+  walkthroughs. Module-1 (individual): 12 files. Module-2 (team):
+  18 files. Module-3 (organization): 4 files.
+
+### Changed
+
+- No code changes. WALKTHROUGHs are pure documentation; the
+  pattern surfaces, schemas, and console scripts are unchanged
+  from v0.20.0.
+
+### Compatibility
+
+- All 2,252 tests pass (1 skipped: crewai not installed).
+- Wire format unchanged. All 34 patterns unchanged.
+- Public API surface unchanged.
+
 ## [0.20.0] — 2026-06-09
 
 CLI + cookbook + docs expansion on top of v0.19.x.
