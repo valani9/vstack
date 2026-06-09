@@ -146,7 +146,6 @@ def _group_decision_stub() -> StubClient:
 
 
 def main() -> None:
-    from datetime import datetime, timezone
 
     from vstack.group_decision import (
         DecisionRequest,

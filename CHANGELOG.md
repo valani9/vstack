@@ -6,6 +6,27 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.19.1] — 2026-06-09
+
+CI hotfix on top of v0.19.0.
+
+### Fixed
+
+- 8 unused-import F401 errors in cookbook recipes 07/08/10/etc.
+  (`datetime.datetime`, `datetime.timezone`, `vstack.lencioni.AgentMessage`,
+  `vstack.lencioni.MultiAgentTrace`).
+- 1 unused-variable F841 error in
+  `examples/cookbook/08_groupthink_cascade.py:225` (`base_time`).
+
+CI lints `examples/` in addition to the source tree; my local
+`ruff check` runs were scoped to `_dashboard/` and missed the
+cookbook offenders.
+
+### Compatibility
+
+- All 2,239 tests pass unchanged. ruff check + ruff format check
+  clean across the full source tree.
+
 ## [0.19.0] — 2026-06-09
 
 Catalog + dashboard + cookbook expansion. Four substantial additions

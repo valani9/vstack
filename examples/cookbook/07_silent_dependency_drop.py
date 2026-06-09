@@ -204,9 +204,7 @@ def _safety_stub() -> StubClient:
 
 
 def main() -> None:
-    from datetime import datetime, timezone
 
-    from vstack.lencioni import AgentMessage, MultiAgentTrace
     from vstack.process_gain_loss import (
         IndividualBaseline,
         ProcessGainLossDetector,

@@ -173,7 +173,6 @@ def _devils_stub() -> StubClient:
 
 
 def main() -> None:
-    from datetime import datetime, timezone
 
     from vstack.debate_pathology import (
         DebateMessage,
@@ -223,7 +222,6 @@ def main() -> None:
     print("=" * 60)
     print("2. Devil's Advocate Role Separator (#28)")
     print("=" * 60)
-    base_time = messages[0]["timestamp"]
     da_trace = SingleAgentTrace(
         agent_id="agent_a",
         task="Decide JWT migration timing",
