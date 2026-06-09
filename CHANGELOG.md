@@ -6,6 +6,51 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.24.0] — 2026-06-09
+
+Three new feature modules: scorecard, budget, trace_zoo.
+
+### Added
+
+- **`vstack.scorecard`** — per-agent multi-pattern scorecard with
+  letter grades. Aggregates findings from many patterns into
+  per-dimension scores (Reasoning / Coordination / Trust / Workload
+  / Culture), each with an A+ → F letter grade. Includes
+  `compute_scorecard()`, `compare_scorecards()` (for drift
+  detection), `is_blocking_regression()` (for CI gates), and
+  text/markdown/HTML renderers. New `vstack-scorecard` CLI with
+  `compute` / `render` / `compare` subcommands. 119 new tests.
+- **`vstack.budget`** — cost-budget enforcement middleware. Wraps
+  any LLM client with rolling-window limits on cost ($), call
+  count, and token count. Per-minute / per-hour / per-day
+  windows. `BudgetEnforcer` for single-budget enforcement;
+  `BudgetRegistry` with contextvars-based active-client tracking
+  for per-request budget scoping. `BudgetExceeded` exception
+  carries kind/window/limit metadata. 42 new tests.
+- **`vstack.trace_zoo`** — canonical library of named synthetic
+  agent traces. 12 curated traces covering the main failure modes
+  (stuck_in_loop, hallucinated_citation, sycophancy_drift,
+  over_apology_loop, overconfidence_spiral, context_saturation,
+  premature_completion, tool_misuse, refusal_cascade,
+  motivation_collapse, anxious_overhedge, healthy_individual).
+  Each carries category + shape + expected severity + expected
+  dominant pattern. New `vstack-trace-zoo` CLI with `list` /
+  `show` / `get` / `categories` / `shapes` subcommands. 37 new
+  tests.
+
+### Changed
+
+- Test count: 2,252 → 2,450 (+198 from the three new modules).
+- `pyproject.toml` adds `_scorecard`, `_budget`, `_trace_zoo` to
+  the force-include block + testpaths + console scripts.
+
+### Compatibility
+
+- All 2,450 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded. No removals, no
+  argument-shape changes.
+- Wire format unchanged.
+
 ## [0.23.0] — 2026-06-09
 
 Documentation expansion: framework playbooks, concepts, tutorials,
