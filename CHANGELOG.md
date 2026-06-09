@@ -6,6 +6,35 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.30.0] — 2026-06-09
+
+Two more feature modules: veval + recipes_dsl. Sixteen feature
+modules total since v0.23.0.
+
+### Added
+
+- **`vstack.veval`** — pattern-vs-ground-truth evaluation harness.
+  `EvalCase` carries trace + expected severity. `EvalHarness.run()`
+  invokes the pattern, compares predicted vs expected severity,
+  returns `EvalResult`. `compute_metrics()` produces precision,
+  recall, F1, accuracy, and confusion matrix (TP/FP/FN/TN).
+  JSON-serializable results.
+- **`vstack.recipes_dsl`** — declarative YAML/JSON DSL for custom
+  recipes. `validate_recipe()` enforces shape/cluster constraints
+  + pattern format. `load_recipe_from_dict` / `load_recipe_from_file`
+  / `load_recipes_from_dir`. Built-in minimal YAML parser (falls
+  back to PyYAML if installed). `RecipeDSL` dataclass with full
+  metadata pass-through.
+
+### Changed
+
+- Test count: 2,678 → 2,719 (+41 from the two new modules).
+
+### Compatibility
+
+- All 2,719 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.29.0] — 2026-06-09
 
 Two more feature modules: signing + synth.
