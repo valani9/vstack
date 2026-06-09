@@ -6,6 +6,46 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.23.0] — 2026-06-09
+
+Documentation expansion: framework playbooks, concepts, tutorials,
+cluster demos, migration guides.
+
+### Added
+
+- **6 framework integration playbooks** under `docs/integrations/`:
+  LangChain, LangGraph, CrewAI, AutoGen, Pydantic-AI, LlamaIndex.
+  Each covers the adapter, the 8 patterns most useful for that
+  framework's failure modes, trace-capture mechanics, common
+  pathologies, and a production wiring snippet.
+- **5 per-cluster combined recipe demos** under `examples/clusters/`:
+  reasoning, coordination, trust, workload, culture. Each runs
+  the recipes for its cluster against representative traces and
+  prints a comparative summary.
+- **5 migration guides** under `docs/migrations/` covering the
+  v0.10 → v0.22 upgrade path. Each names what changed, what broke,
+  and what didn't.
+- **4 new tutorials** under `docs/tutorials/`:
+  - `07_dashboard_deployment`: stand up the dashboard server.
+  - `08_baselines_and_drift`: per-pattern + fleet baselines + CI gates.
+  - `09_async_fanout`: production-volume async with rate limiting.
+  - `10_observability`: structured logging, metrics, tracing, alerts.
+- **4 new concept deep-dives** under `docs/concepts/`:
+  - `trace-shapes`: individual / team / org schema details.
+  - `severity-and-confidence`: 2x2 matrix + calibration.
+  - `llm-clients`: client protocol + custom integration.
+  - `recipes-vs-bundles`: composition modes compared.
+
+### Changed
+
+- Pure-documentation release. No code, schema, or wire-format
+  changes from v0.22.0.
+
+### Compatibility
+
+- All 2,252 tests pass (1 skipped: crewai not installed).
+- Public API surface unchanged.
+
 ## [0.22.0] — 2026-06-09
 
 Examples gallery expansion: cookbook + per-pattern starters + trace
