@@ -6,6 +6,38 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.28.0] — 2026-06-09
+
+Two more feature modules: vbench + markers.
+
+### Added
+
+- **`vstack.vbench`** — in-process pattern benchmark harness.
+  `BenchHarness` runs patterns × traces × reps and tabulates
+  per-run metrics: latency, finding count, severity distribution.
+  `BenchResult` aggregates with `Statistics` (mean/median/p95/p99).
+  `compare_results()` flags regressions and improvements between
+  two results. JSON-serializable.
+- **`vstack.markers`** — structured markers for trace steps.
+  Built-in marker constructors: `cost_marker`, `latency_marker`,
+  `quality_marker`, `safety_marker`. `CustomMarker` for user-
+  defined kinds. `attach_marker()` stores markers on dict or
+  object-style steps. `analyze_markers()` aggregates across all
+  steps with cost rollup, slow-step detection (configurable
+  threshold), quality average, blocked-step count, and custom
+  marker grouping.
+
+### Changed
+
+- Test count: 2,588 → 2,631 (+43 from the two new modules).
+- `pyproject.toml` adds `_vbench`, `_markers` to force-include +
+  testpaths.
+
+### Compatibility
+
+- All 2,631 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.27.0] — 2026-06-09
 
 Two more feature modules: calibrate + streaming.

@@ -1,6 +1,6 @@
 [project]
 name = "valanistack"
-version = "0.27.0"
+version = "0.28.0"
 description = "Organizational behavior, practiced on AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -224,6 +224,8 @@ only-include = []
 "_vdiff/lib" = "vstack/vdiff"
 "_calibrate/lib" = "vstack/calibrate"
 "_streaming/lib" = "vstack/streaming"
+"_vbench/lib" = "vstack/vbench"
+"_markers/lib" = "vstack/markers"
 "module-2-team/30-aar-generator/lib" = "vstack/aar"
 "module-2-team/17-lencioni-diagnostic/lib" = "vstack/lencioni"
 "module-2-team/18-trust-triangle-audit/lib" = "vstack/trust_triangle"
@@ -305,6 +307,8 @@ testpaths = [
     "_vdiff",
     "_calibrate",
     "_streaming",
+    "_vbench",
+    "_markers",
 ]
 addopts = "-ra --tb=short --strict-markers"
 filterwarnings = [
