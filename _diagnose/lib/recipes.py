@@ -942,9 +942,7 @@ def _validate_catalog() -> dict[str, Recipe]:
     for r in _CATALOG:
         for slug in r.patterns:
             if slug not in PATTERNS:
-                raise RuntimeError(
-                    f"recipe {r.name!r} references unknown pattern {slug!r}"
-                )
+                raise RuntimeError(f"recipe {r.name!r} references unknown pattern {slug!r}")
         if r.name in out:
             raise RuntimeError(f"duplicate recipe name {r.name!r}")
         out[r.name] = r

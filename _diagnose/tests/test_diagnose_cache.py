@@ -82,7 +82,9 @@ def test_wrapper_forwards_unknown_attributes() -> None:
     assert w.custom_attr == "value-on-inner"  # type: ignore[attr-defined]
 
 
-def _fake_pattern_calling_llm(slug: str, pattern_id: int, prompt: str = "shared-prompt") -> PatternInfo:
+def _fake_pattern_calling_llm(
+    slug: str, pattern_id: int, prompt: str = "shared-prompt"
+) -> PatternInfo:
     """Synthetic pattern whose analyzer issues one ``complete()`` call
     with a configurable prompt. Used to verify cache hit/miss behavior
     across two patterns in the same diagnose() run.

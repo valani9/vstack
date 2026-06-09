@@ -37,9 +37,7 @@ from vstack.diagnose.registry import PatternInfo
 # --- helpers ---------------------------------------------------------
 
 
-def _make_fake_module(
-    module_name: str, cls_name: str, async_cls_name: str | None = None
-) -> None:
+def _make_fake_module(module_name: str, cls_name: str, async_cls_name: str | None = None) -> None:
     """Register a synthetic module under ``module_name`` exposing one
     analyzer class (with optional async variant). The runner uses
     importlib.import_module, so sys.modules registration is enough.
@@ -67,6 +65,7 @@ def _make_fake_module(
     setattr(mod, cls_name, _Analyzer)
 
     if async_cls_name:
+
         class _AsyncAnalyzer:
             def __init__(self, *, llm_client=None, mode="standard"):
                 self.llm_client = llm_client
@@ -153,14 +152,10 @@ def test_runner_ranks_findings_by_severity() -> None:
 
     # Mutate the synthetic analyzers to emit different severities.
     sys.modules[high.module].HighpatAnalyzer.run = (  # type: ignore[attr-defined]
-        lambda self, trace: types.SimpleNamespace(
-            findings=[{"severity": "high", "title": "H"}]
-        )
+        lambda self, trace: types.SimpleNamespace(findings=[{"severity": "high", "title": "H"}])
     )
     sys.modules[low.module].LowpatAnalyzer.run = (  # type: ignore[attr-defined]
-        lambda self, trace: types.SimpleNamespace(
-            findings=[{"severity": "low", "title": "L"}]
-        )
+        lambda self, trace: types.SimpleNamespace(findings=[{"severity": "low", "title": "L"}])
     )
 
     report = diagnose(FakeTrace(), patterns=[low, high])
@@ -239,9 +234,7 @@ def test_async_runner_concurrent() -> None:
     _setup_fake_pattern(a)
     _setup_fake_pattern(b)
 
-    report = asyncio.run(
-        diagnose_async(FakeTrace(), patterns=[a, b])
-    )
+    report = asyncio.run(diagnose_async(FakeTrace(), patterns=[a, b]))
     assert isinstance(report, DiagnoseReport)
     assert len(report.per_pattern) == 2
     # Async analyzers produced "high" severity findings per the helper.
@@ -252,7 +245,8 @@ def test_async_runner_concurrent() -> None:
 
 
 def test_finding_severity_rank_monotonic() -> None:
-    assert Finding(pattern="x", severity="critical", title="t").severity_rank() > Finding(
-        pattern="x", severity="medium", title="t"
-    ).severity_rank()
+    assert (
+        Finding(pattern="x", severity="critical", title="t").severity_rank()
+        > Finding(pattern="x", severity="medium", title="t").severity_rank()
+    )
     assert Finding(pattern="x", severity="none", title="t").severity_rank() == 0

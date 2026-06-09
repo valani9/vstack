@@ -27,9 +27,7 @@ def test_catalog_non_empty() -> None:
 def test_every_recipe_pattern_exists() -> None:
     for r in RECIPES.values():
         for slug in r.patterns:
-            assert slug in PATTERNS, (
-                f"recipe {r.name!r} references unknown pattern {slug!r}"
-            )
+            assert slug in PATTERNS, f"recipe {r.name!r} references unknown pattern {slug!r}"
 
 
 def test_every_recipe_has_a_description_and_shape() -> None:
@@ -110,6 +108,7 @@ def test_diagnose_explicit_patterns_beats_recipe() -> None:
 
 def test_diagnose_unknown_recipe_raises() -> None:
     import types
+
     with pytest.raises(ValueError):
         diagnose(
             types.SimpleNamespace(goal="x", steps=()),

@@ -54,18 +54,14 @@ def _load_trace(path: str | None) -> dict[str, Any]:
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise SystemExit(
-                f"vstack-diagnose: stdin is not valid JSON ({exc})."
-            )
+            raise SystemExit(f"vstack-diagnose: stdin is not valid JSON ({exc}).")
     p = Path(path)
     if not p.exists():
         raise SystemExit(f"vstack-diagnose: trace file not found: {path}")
     try:
         return json.loads(p.read_text())
     except json.JSONDecodeError as exc:
-        raise SystemExit(
-            f"vstack-diagnose: {path} is not valid JSON ({exc})."
-        )
+        raise SystemExit(f"vstack-diagnose: {path} is not valid JSON ({exc}).")
 
 
 def _build_trace_object(payload: dict[str, Any]) -> Any:
@@ -84,8 +80,7 @@ def _build_trace_object(payload: dict[str, Any]) -> Any:
         from vstack.lencioni import AgentMessage, MultiAgentTrace
 
         msgs = [
-            AgentMessage(**m) if isinstance(m, dict) else m
-            for m in payload.get("messages", [])
+            AgentMessage(**m) if isinstance(m, dict) else m for m in payload.get("messages", [])
         ]
         return MultiAgentTrace(
             goal=payload.get("goal", ""),
@@ -97,6 +92,7 @@ def _build_trace_object(payload: dict[str, Any]) -> Any:
 
     if "org_chart" in payload or "structure_matrix" in payload:
         import types
+
         return types.SimpleNamespace(**payload)
 
     # default: single-agent
@@ -113,17 +109,8 @@ def _build_trace_object(payload: dict[str, Any]) -> Any:
         # test of {"action": "edit"} still produces a usable trace.
         timestamp = s.get("timestamp") or datetime.now(timezone.utc).isoformat()
         step_type = s.get("type") or _guess_step_type(s)
-        content = (
-            s.get("content")
-            or s.get("note")
-            or s.get("action")
-            or f"step {i + 1}"
-        )
-        kept = {
-            k: v
-            for k, v in s.items()
-            if k in {"metadata", "parent_step_id", "step_id"}
-        }
+        content = s.get("content") or s.get("note") or s.get("action") or f"step {i + 1}"
+        kept = {k: v for k, v in s.items() if k in {"metadata", "parent_step_id", "step_id"}}
         return TraceStep(
             timestamp=timestamp,
             type=step_type,
@@ -168,12 +155,15 @@ def _resolve_client(
         return None
     if provider == "anthropic":
         from vstack.aar.clients import AnthropicClient
+
         return AnthropicClient()
     if provider == "openai":
         from vstack.aar.clients import OpenAIClient
+
         return OpenAIClient()
     if provider == "ollama":
         from vstack.aar.clients import OllamaClient
+
         return OllamaClient()
     raise SystemExit(
         f"vstack-diagnose: unknown --client {provider!r}. "
@@ -289,9 +279,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.list:
-        rows = sorted(
-            PATTERNS.values(), key=lambda p: (p.module_id, p.pattern_id)
-        )
+        rows = sorted(PATTERNS.values(), key=lambda p: (p.module_id, p.pattern_id))
         for info in rows:
             shapes_str = "/".join(info.shapes)
             print(f"  {info.name:<22}  [{shapes_str:<22}] {info.summary}")
@@ -299,6 +287,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.list_recipes:
         from .recipes import list_recipes
+
         for r in list_recipes():
             print(f"  {r.name:<22}  [{r.shape:<10}] {r.description}")
         return 0
@@ -307,6 +296,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     recipe = args.recipe
     if recipe is None and args.match:
         from .recipes import recipe_for_trigger
+
         matched = recipe_for_trigger(args.match)
         if matched is not None:
             recipe = matched.name
@@ -341,9 +331,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"## Top {args.top} findings",
             ]
             for i, f in enumerate(report.top(args.top), 1):
-                lines.append(
-                    f"{i}. **[{f.severity}]** `{f.pattern}` -- {f.title}"
-                )
+                lines.append(f"{i}. **[{f.severity}]** `{f.pattern}` -- {f.title}")
                 if f.evidence:
                     lines.append(f"   - evidence: {f.evidence}")
                 if f.intervention:

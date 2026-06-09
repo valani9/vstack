@@ -157,9 +157,7 @@ class DiagnoseReport:
         if self.findings:
             lines.append("## Top findings")
             for i, f in enumerate(self.top(5), 1):
-                lines.append(
-                    f"{i}. **[{f.severity}]** `{f.pattern}` -- {f.title}"
-                )
+                lines.append(f"{i}. **[{f.severity}]** `{f.pattern}` -- {f.title}")
                 if f.evidence:
                     lines.append(f"   - evidence: {f.evidence}")
                 if f.intervention:
@@ -228,9 +226,7 @@ def _resolve_trace_shape(trace: Any, override: TraceShape | None) -> TraceShape:
     """
     if override is not None:
         if override not in ALL_SHAPES:
-            raise ValueError(
-                f"unknown trace shape {override!r}; expected one of {ALL_SHAPES}"
-            )
+            raise ValueError(f"unknown trace shape {override!r}; expected one of {ALL_SHAPES}")
         return override
     if hasattr(trace, "agents") and getattr(trace, "agents"):
         return "team"
@@ -256,9 +252,7 @@ def _normalize_bundle(
             out.append(item)
             continue
         if item not in PATTERNS:
-            raise ValueError(
-                f"unknown pattern {item!r}; known: {sorted(PATTERNS)}"
-            )
+            raise ValueError(f"unknown pattern {item!r}; known: {sorted(PATTERNS)}")
         out.append(PATTERNS[item])
     return tuple(out)
 
@@ -296,8 +290,7 @@ async def _call_analyzer_async(analyzer_obj: Any, trace: Any) -> Any:
             return await res
         return res
     raise TypeError(
-        f"async analyzer {type(analyzer_obj).__name__} does not expose a "
-        f"known entry point"
+        f"async analyzer {type(analyzer_obj).__name__} does not expose a known entry point"
     )
 
 
@@ -353,10 +346,9 @@ def diagnose(
     """
     if recipe is not None and patterns is None:
         from .recipes import RECIPES
+
         if recipe not in RECIPES:
-            raise ValueError(
-                f"unknown recipe {recipe!r}; known: {sorted(RECIPES)}"
-            )
+            raise ValueError(f"unknown recipe {recipe!r}; known: {sorted(RECIPES)}")
         rec = RECIPES[recipe]
         patterns = rec.patterns
         if shape is None:
@@ -368,6 +360,7 @@ def diagnose(
     cache_wrapper: Any | None = None
     if cache and llm_client is not None:
         from .cache import CachingLLMClient
+
         cache_wrapper = CachingLLMClient(inner=llm_client)
         effective_client = cache_wrapper
     else:
@@ -381,9 +374,7 @@ def diagnose(
             classes = resolve_pattern(info)
             cls = classes["analyzer"]
             if cls is None:
-                raise ImportError(
-                    f"pattern {info.name!r} has no main analyzer class"
-                )
+                raise ImportError(f"pattern {info.name!r} has no main analyzer class")
             ctor_kwargs: dict[str, Any] = {}
             if effective_client is not None:
                 ctor_kwargs["llm_client"] = effective_client
@@ -393,13 +384,17 @@ def diagnose(
             if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
                 ctor_kwargs.setdefault("mode", mode)
             import time
+
             t0 = time.time()
             try:
                 inst = cls(**ctor_kwargs)
             except TypeError:
                 # Fallback for analyzers that take llm_client positional.
                 if effective_client is not None:
-                    inst = cls(effective_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
+                    inst = cls(
+                        effective_client,
+                        **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"},
+                    )
                 else:
                     raise
             result.result = _call_analyzer(inst, trace)
@@ -437,10 +432,9 @@ async def diagnose_async(
     rate-limit coordination."""
     if recipe is not None and patterns is None:
         from .recipes import RECIPES
+
         if recipe not in RECIPES:
-            raise ValueError(
-                f"unknown recipe {recipe!r}; known: {sorted(RECIPES)}"
-            )
+            raise ValueError(f"unknown recipe {recipe!r}; known: {sorted(RECIPES)}")
         rec = RECIPES[recipe]
         patterns = rec.patterns
         if shape is None:
@@ -453,6 +447,7 @@ async def diagnose_async(
     cache_wrapper: Any | None = None
     if cache and llm_client is not None:
         from .cache import CachingLLMClient
+
         cache_wrapper = CachingLLMClient(inner=llm_client)
         effective_client = cache_wrapper
     else:
@@ -467,9 +462,7 @@ async def diagnose_async(
                 classes = resolve_pattern(info)
                 cls = classes["analyzer_async"] or classes["analyzer"]
                 if cls is None:
-                    raise ImportError(
-                        f"pattern {info.name!r} has no analyzer class"
-                    )
+                    raise ImportError(f"pattern {info.name!r} has no analyzer class")
                 ctor_kwargs: dict[str, Any] = {}
                 if effective_client is not None:
                     ctor_kwargs["llm_client"] = effective_client
@@ -477,12 +470,16 @@ async def diagnose_async(
                 if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
                     ctor_kwargs.setdefault("mode", mode)
                 import time
+
                 t0 = time.time()
                 try:
                     inst = cls(**ctor_kwargs)
                 except TypeError:
                     if effective_client is not None:
-                        inst = cls(effective_client, **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"})
+                        inst = cls(
+                            effective_client,
+                            **{k: v for k, v in ctor_kwargs.items() if k != "llm_client"},
+                        )
                     else:
                         raise
                 result.result = await _call_analyzer_async(inst, trace)
@@ -544,8 +541,10 @@ def _install_telemetry_sink() -> tuple[Any, Callable[[], None]]:
             set_default_sink,
         )
     except ImportError:
+
         class _Stub:
             events: list[Any] = []
+
         return _Stub(), lambda: None
 
     previous = get_default_sink()

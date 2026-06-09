@@ -6,6 +6,46 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.20.0] — 2026-06-09
+
+CLI + cookbook + docs expansion on top of v0.19.x.
+
+### Added
+
+- **`vstack-recipes` CLI**: terminal browser for the recipe catalog.
+  Supports listing all recipes (default, grouped by cluster),
+  filtering by `--cluster` / `--shape`, substring search via `--q`,
+  free-text trigger routing via `--match`, and per-recipe detail
+  via `--show <slug>` (with `--json` / `--md` output formats).
+  13 new tests in `_diagnose/tests/test_recipes_cli.py`.
+- Three new cookbook recipes demonstrating v0.19.0 named-recipe
+  expansions: 12 `refusal_cascade` (Grant Strengths + HEXACO),
+  13 `context_saturation` (Yerkes-Dodson forensic + Lewin), and
+  14 `blame_spiral` (Lewin + Lencioni).
+- **`docs/PATTERNS_OVERVIEW.md`**: comprehensive single-page map
+  of all 34 patterns with module groupings, literature-anchor map,
+  and failure-surface → patterns table.
+- **`docs/RECIPES_OVERVIEW.md`**: catalog overview of all 33 named
+  recipes with per-cluster tables, invocation examples (Python /
+  CLI / MCP / HTTP), and the free-text router walkthrough.
+
+### Changed
+
+- Repo-wide `ruff format` sweep: 11 pre-existing files were brought
+  into format compliance (mostly pre-existing tests + a few module
+  files that hadn't been formatted since their last edit). Lint
+  is now green across the full CI scope.
+
+### Compatibility
+
+- All 2,252 tests pass (1 skipped: crewai not installed). +13
+  recipes-CLI tests on top of v0.19.1's 2,239.
+- Wire format unchanged. All 34 patterns unchanged. The 33 recipes
+  from v0.19.0 ship verbatim; the new `vstack-recipes` CLI is a
+  read-only browser.
+- Public API surface strictly expanded (new `vstack-recipes`
+  console script). No removals.
+
 ## [0.19.1] — 2026-06-09
 
 CI hotfix on top of v0.19.0.

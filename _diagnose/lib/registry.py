@@ -26,9 +26,7 @@ ALL_SHAPES: tuple[TraceShape, ...] = ("individual", "team", "org")
 # Severity vocabulary. Mirrors the AAR pattern's 7-point scale so that
 # findings from different patterns compare cleanly. Patterns that emit
 # coarser scores (low/medium/high) are mapped into this scale.
-Severity = Literal[
-    "none", "trace", "low", "moderate", "medium", "high", "critical"
-]
+Severity = Literal["none", "trace", "low", "moderate", "medium", "high", "critical"]
 SEVERITY_ORDER: tuple[Severity, ...] = (
     "none",
     "trace",
@@ -523,9 +521,7 @@ def iter_bundle(shape: TraceShape | None) -> tuple[PatternInfo, ...]:
     if shape is None:
         shape = "team"
     if shape not in ALL_SHAPES:
-        raise ValueError(
-            f"unknown trace shape {shape!r}; expected one of {ALL_SHAPES}"
-        )
+        raise ValueError(f"unknown trace shape {shape!r}; expected one of {ALL_SHAPES}")
     return tuple(PATTERNS[name] for name in DEFAULT_BUNDLES[shape])
 
 

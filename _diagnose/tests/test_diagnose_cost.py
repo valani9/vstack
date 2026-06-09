@@ -51,9 +51,7 @@ def _make_fake_pattern_emitting_telemetry(slug: str, pattern_id: int) -> Pattern
                 total_tokens=160,
                 elapsed_ms=22.0,
             )
-            return types.SimpleNamespace(
-                findings=[{"severity": "low", "title": f"{slug} smoke"}]
-            )
+            return types.SimpleNamespace(findings=[{"severity": "low", "title": f"{slug} smoke"}])
 
     _Analyzer.__name__ = cls_name
     setattr(mod, cls_name, _Analyzer)

@@ -77,28 +77,28 @@ _EVIDENCE_LIST_FIELDS: tuple[str, ...] = (
     "findings",
     "top_findings",
     # categorical-axis names (per-pattern)
-    "dysfunctions",         # Lencioni
-    "legs",                 # Trust Triangle (when v0.2 result exposes it)
-    "domains",              # Goleman EI (v0.2 result)
-    "factors",              # generic
-    "triggers",             # Stone-Heen
-    "strengths",            # Grant
-    "pathologies",          # Debate Pathology
-    "quadrants",            # Johari
-    "behaviors",            # Psych Safety
-    "loci",                 # Lewin (when v0.2 result exposes it)
-    "terms",                # Vroom (when v0.2 result exposes it)
-    "traps",                # Motivation Traps (when v0.2 result exposes it)
-    "needs",                # SDT (when v0.2 result exposes it)
-    "biases",               # Bias Stack (when v0.2 result exposes it)
-    "characteristics",      # Robbins-Judge
-    "dimensions",           # Org Structure / McAllister
-    "phases",               # Devil's Advocate (when v0.2 result exposes it)
-    "zones",                # Yerkes-Dodson (when v0.2 result exposes it)
-    "styles",               # Thomas-Kilmann (when v0.2 result exposes it)
-    "metrics",              # Heffernan / Span-of-Control
-    "lessons",              # AAR
-    "branches",             # Mayer-Salovey overlay
+    "dysfunctions",  # Lencioni
+    "legs",  # Trust Triangle (when v0.2 result exposes it)
+    "domains",  # Goleman EI (v0.2 result)
+    "factors",  # generic
+    "triggers",  # Stone-Heen
+    "strengths",  # Grant
+    "pathologies",  # Debate Pathology
+    "quadrants",  # Johari
+    "behaviors",  # Psych Safety
+    "loci",  # Lewin (when v0.2 result exposes it)
+    "terms",  # Vroom (when v0.2 result exposes it)
+    "traps",  # Motivation Traps (when v0.2 result exposes it)
+    "needs",  # SDT (when v0.2 result exposes it)
+    "biases",  # Bias Stack (when v0.2 result exposes it)
+    "characteristics",  # Robbins-Judge
+    "dimensions",  # Org Structure / McAllister
+    "phases",  # Devil's Advocate (when v0.2 result exposes it)
+    "zones",  # Yerkes-Dodson (when v0.2 result exposes it)
+    "styles",  # Thomas-Kilmann (when v0.2 result exposes it)
+    "metrics",  # Heffernan / Span-of-Control
+    "lessons",  # AAR
+    "branches",  # Mayer-Salovey overlay
     # _evidence-suffix names (often the canonical schema field)
     "dysfunction_evidence",
     "leg_evidence",
@@ -120,8 +120,8 @@ _EVIDENCE_LIST_FIELDS: tuple[str, ...] = (
     "dimension_evidence",
     # collection accessor names
     "agent_contributions",  # Social Loafing
-    "contributing_factors", # Process Gain/Loss (forensic-mode result)
-    "evidence",             # generic last-chance
+    "contributing_factors",  # Process Gain/Loss (forensic-mode result)
+    "evidence",  # generic last-chance
 )
 
 
@@ -155,11 +155,11 @@ _TITLE_FIELDS: tuple[str, ...] = (
     "zone",
     "style",
     "branch",
-    "state",          # Cognitive Reappraisal (strategy state) / Glaser (neurochemical)
-    "strategy",       # Cognitive Reappraisal
-    "pattern",        # AAR Lesson.pattern (failure-pattern slug)
-    "agent_name",     # Social Loafing
-    "metric",         # Heffernan / Span (the metric name)
+    "state",  # Cognitive Reappraisal (strategy state) / Glaser (neurochemical)
+    "strategy",  # Cognitive Reappraisal
+    "pattern",  # AAR Lesson.pattern (failure-pattern slug)
+    "agent_name",  # Social Loafing
+    "metric",  # Heffernan / Span (the metric name)
 )
 
 
@@ -192,11 +192,11 @@ _EXPLANATION_FIELDS: tuple[str, ...] = (
 # walk these in order and pick the first present.
 _SEVERITY_FIELDS: tuple[str, ...] = (
     "severity",
-    "severity_of_gap",        # McAllister
-    "severity_of_absence",    # Psych Safety
-    "severity_of_overuse",    # Grant (if exposed)
-    "mismatch_severity",      # Cognitive Reappraisal forensic
-    "risk",                   # HEXACO factor / Robbins-Judge characteristic
+    "severity_of_gap",  # McAllister
+    "severity_of_absence",  # Psych Safety
+    "severity_of_overuse",  # Grant (if exposed)
+    "mismatch_severity",  # Cognitive Reappraisal forensic
+    "risk",  # HEXACO factor / Robbins-Judge characteristic
 )
 
 
@@ -204,15 +204,15 @@ _SEVERITY_FIELDS: tuple[str, ...] = (
 # derive one from a numeric axis.
 _SCORE_FIELDS: tuple[str, ...] = (
     "score",
-    "weight",                 # Johari
-    "presence_score",         # Psych Safety
-    "wobble_score",           # Trust Triangle
-    "overuse_score",          # Grant
-    "observed_score",         # Robbins-Judge / Org Structure
-    "fit_score",              # Robbins-Judge / Org Structure
-    "substantive_score",      # Devil's Advocate
-    "value",                  # Heffernan metric
-    "coherence_score",        # Schein
+    "weight",  # Johari
+    "presence_score",  # Psych Safety
+    "wobble_score",  # Trust Triangle
+    "overuse_score",  # Grant
+    "observed_score",  # Robbins-Judge / Org Structure
+    "fit_score",  # Robbins-Judge / Org Structure
+    "substantive_score",  # Devil's Advocate
+    "value",  # Heffernan metric
+    "coherence_score",  # Schein
 )
 
 
@@ -224,9 +224,9 @@ _SCORE_FIELDS: tuple[str, ...] = (
 ADAPTERS: dict[str, Callable[[Any], list["Finding"]]] = {}
 
 
-def register(pattern_name: str) -> Callable[
-    [Callable[[Any], list["Finding"]]], Callable[[Any], list["Finding"]]
-]:
+def register(
+    pattern_name: str,
+) -> Callable[[Callable[[Any], list["Finding"]]], Callable[[Any], list["Finding"]]]:
     """Decorator used to register a per-pattern adapter override.
 
     Example::
@@ -285,9 +285,7 @@ def extract_findings(pattern: str, result: Any) -> list["Finding"]:
     # Step 3: result has severity + title at the top level.
     sev = _first_attr(result, _SEVERITY_FIELDS)
     if sev is not None:
-        title = _first_attr(result, _TITLE_FIELDS) or _first_attr(
-            result, _EXPLANATION_FIELDS
-        )
+        title = _first_attr(result, _TITLE_FIELDS) or _first_attr(result, _EXPLANATION_FIELDS)
         if title:
             return [
                 Finding(

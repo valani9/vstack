@@ -238,12 +238,8 @@ def test_registered_adapter_takes_precedence() -> None:
         # would emit 2 findings, but the override returns exactly 1.
         result = SimpleNamespace(
             dysfunctions=[
-                SimpleNamespace(
-                    dysfunction="x", severity="high", evidence_quotes=[]
-                ),
-                SimpleNamespace(
-                    dysfunction="y", severity="medium", evidence_quotes=[]
-                ),
+                SimpleNamespace(dysfunction="x", severity="high", evidence_quotes=[]),
+                SimpleNamespace(dysfunction="y", severity="medium", evidence_quotes=[]),
             ]
         )
         findings = extract_findings("custompat_test", result)
@@ -264,11 +260,7 @@ def test_adapter_exception_falls_through_to_smart() -> None:
 
     try:
         result = SimpleNamespace(
-            dysfunctions=[
-                SimpleNamespace(
-                    dysfunction="x", severity="high", evidence_quotes=[]
-                )
-            ]
+            dysfunctions=[SimpleNamespace(dysfunction="x", severity="high", evidence_quotes=[])]
         )
         findings = extract_findings("custompat_err", result)
         # Smart extractor still produced the Finding.
@@ -368,9 +360,7 @@ def test_item_without_severity_or_score_is_skipped() -> None:
     result = SimpleNamespace(
         dysfunctions=[
             SimpleNamespace(dysfunction="vague", explanation="no signal"),
-            SimpleNamespace(
-                dysfunction="real", severity="high", evidence_quotes=["q"]
-            ),
+            SimpleNamespace(dysfunction="real", severity="high", evidence_quotes=["q"]),
         ]
     )
     findings = extract_findings("skip_vague", result)
