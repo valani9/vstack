@@ -6,6 +6,57 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.22.0] — 2026-06-09
+
+Examples gallery expansion: cookbook + per-pattern starters + trace
+fixtures library.
+
+### Added
+
+- **24 new cookbook scripts** under `examples/cookbook/` covering
+  every named recipe in the catalog that didn't yet have an
+  end-to-end stub-driven script: `15_stuck_in_loop`,
+  `16_agents_arguing`, `17_silent_failure`, `18_bad_feedback_loop`,
+  `19_culture_drift`, `20_goal_misalignment`, `21_trust_collapse`,
+  `22_overconfidence_spiral`, `23_plan_collapse`,
+  `24_premature_completion`, `25_tool_misuse`, `26_anxious_overhedge`,
+  `27_motivation_collapse`, `28_handoff_loss`,
+  `29_deference_cascade`, `30_expert_loafing`, `31_cold_handoff`,
+  `32_performative_empathy`, `33_decision_paralysis`,
+  `34_hub_spoke_fragility`, `35_role_thrash`,
+  `36_espoused_actual_drift`, `37_policy_decay`,
+  `38_hyper_specialization`. Each calls `diagnose()` with the
+  named recipe and prints an intervention bundle.
+- **34 per-pattern starter demos** under `examples/patterns/`, one
+  per shipped pattern. Each demo is the minimum runnable invocation
+  for that pattern: import + stub + trace + `diagnose(patterns=[...])`
+  call + summary print. Auto-generated to a consistent shape so the
+  gallery is browsable.
+- **25 new trace builders** in `examples/_shared/traces.py`:
+  `overconfidence_spiral_trace`, `premature_completion_trace`,
+  `tool_misuse_trace`, `anxious_overhedge_trace`,
+  `motivation_collapse_trace`, `hallucination_cascade_trace`,
+  `silent_dependency_drop_trace`, `bottleneck_orchestrator_trace`,
+  `consensus_dilution_trace`, `refusal_cascade_trace`,
+  `context_saturation_trace`, `blame_spiral_trace`,
+  `cold_handoff_trace`, `performative_empathy_trace`,
+  `decision_paralysis_trace`, `role_thrash_trace`,
+  `policy_decay_trace`, `healthy_individual_trace`,
+  `healthy_team_messages`, `healthy_culture_samples`,
+  `expert_loafing_messages`, `deference_cascade_messages`,
+  `trust_collapse_messages`, `schein_drift_samples`,
+  `hyper_specialized_messages`.
+
+### Changed
+
+- Pure-examples release. No changes to pattern surfaces, schemas,
+  console scripts, or wire formats from v0.21.0.
+
+### Compatibility
+
+- All 2,252 tests pass (1 skipped: crewai not installed).
+- Public API surface unchanged.
+
 ## [0.21.0] — 2026-06-09
 
 Per-pattern WALKTHROUGH gallery — 34 end-to-end recipe documents.
