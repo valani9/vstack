@@ -6,6 +6,45 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.34.0] — 2026-06-09
+
+Three more feature modules: timeline + cost_sim + findings_router.
+Twenty-six feature modules total since v0.23.0.
+
+### Added
+
+- **`vstack.timeline`** — chronological event view + ASCII
+  sparklines. `build_timeline()` buckets findings by minute /
+  hour / day / week (UTC). `Timeline` exposes peak_bucket,
+  velocity per period/hour/day, quiet_bucket count. `Bucket`
+  stacks severities. `render_sparkline()` produces unicode
+  block-char sparklines; `render_markdown_timeline()` produces
+  a tabular report.
+- **`vstack.cost_sim`** — what-if cost scenarios for production
+  budget planning. `Scenario` parameterizes traces/day, sample
+  rate, mode (quick/standard/forensic), pattern list, and
+  optional failure_upgrade (10% assumed forensic re-run). Built-
+  in per-pattern pricing for all 34 shipped patterns; override
+  via `custom_pricing`. `simulate()` projects daily / monthly /
+  annual cost. `compare_scenarios()` produces side-by-side
+  markdown table.
+- **`vstack.findings_router`** — smart routing of findings to
+  owners / teams with channel metadata (jira_project /
+  github_label / pagerduty_service / slack_channel). `OwnerRoute`
+  matches on pattern / severity (with floor) / confidence range.
+  `FindingsRouter` evaluates routes in order, first match wins,
+  falls back to default_owner. `Assignment` carries channel
+  routing for downstream issue creation.
+
+### Changed
+
+- Test count: 2,863 → 2,931 (+68 from the three new modules).
+
+### Compatibility
+
+- All 2,931 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.33.0] — 2026-06-09
 
 Three more feature modules: export + findings_db + trace_diff.
