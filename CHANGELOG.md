@@ -6,6 +6,40 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.33.0] — 2026-06-09
+
+Three more feature modules: export + findings_db + trace_diff.
+Twenty-three feature modules total since v0.23.0.
+
+### Added
+
+- **`vstack.export`** — export findings to CSV / JSON / Markdown /
+  Jira ADF / GitHub PR comment. `export_csv()`, `export_json()`,
+  `export_markdown()` (severity-grouped), `export_jira()` (Atlassian
+  Document Format), `export_github_comment()` (PR-comment-sized
+  with 65k char truncation, severity emoji 🔴🟡🔵).
+- **`vstack.findings_db`** — SQLite-backed finding store. `FindingsDB`
+  with auto-schema, store_finding/store_report, find() with rich
+  filters (pattern / severity / agent_id / run_id / timestamp range,
+  multi-value match, limit), count_by() aggregation, indexes on all
+  filter columns. Context-manager safe with __del__ cleanup.
+  In-memory or persistent (file) backing.
+- **`vstack.trace_diff`** — structural comparison of two AgentTraces.
+  Myers-style alignment via SequenceMatcher. `diff_traces()` returns
+  `TraceDelta` with added / removed / changed / unchanged step diffs,
+  goal_changed / outcome_changed / success_flipped flags,
+  `is_regression()` / `is_recovery()` helpers, summary() + to_markdown()
+  + to_dict().
+
+### Changed
+
+- Test count: 2,799 → 2,863 (+64 from the three new modules).
+
+### Compatibility
+
+- All 2,863 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.32.0] — 2026-06-09
 
 Two more feature modules: budgeter + tracer. Twenty feature
