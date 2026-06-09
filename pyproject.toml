@@ -214,6 +214,7 @@ only-include = []
 "_hello/lib" = "vstack/hello"
 "_dashboard/lib" = "vstack/dashboard"
 "_scorecard/lib" = "vstack/scorecard"
+"_budget/lib" = "vstack/budget"
 "module-2-team/30-aar-generator/lib" = "vstack/aar"
 "module-2-team/17-lencioni-diagnostic/lib" = "vstack/lencioni"
 "module-2-team/18-trust-triangle-audit/lib" = "vstack/trust_triangle"
@@ -286,6 +287,7 @@ testpaths = [
     "_hello",
     "_dashboard",
     "_scorecard",
+    "_budget",
 ]
 addopts = "-ra --tb=short --strict-markers"
 filterwarnings = [
