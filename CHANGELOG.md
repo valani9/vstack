@@ -6,6 +6,38 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.29.0] — 2026-06-09
+
+Two more feature modules: signing + synth.
+
+### Added
+
+- **`vstack.signing`** — HMAC-based integrity signing for reports.
+  `Signer` class with sign/verify methods. Canonical JSON
+  serialization for stable hashing. SHA-256 + SHA-512 support.
+  `VerificationError` on signature mismatch. Convenience
+  functions `sign_report()` / `verify_report()`. Key-order
+  independence verified.
+- **`vstack.synth`** — programmatic synthetic trace generator.
+  8 built-in generators: `generate_stuck_in_loop`,
+  `generate_hallucination`, `generate_sycophancy`,
+  `generate_over_apology`, `generate_premature_completion`,
+  `generate_tool_misuse`, `generate_anxious_overhedge`,
+  `generate_healthy`. Each takes parameters (retry_count,
+  turns, etc.) for varying difficulty. `generate_batch()`
+  produces N traces with parameterized seeds for reproducibility.
+  Template registry with `register_template` / `get_template` /
+  `list_templates` for custom generators.
+
+### Changed
+
+- Test count: 2,631 → 2,678 (+47 from the two new modules).
+
+### Compatibility
+
+- All 2,678 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.28.0] — 2026-06-09
 
 Two more feature modules: vbench + markers.
