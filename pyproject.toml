@@ -1,6 +1,6 @@
 [project]
 name = "valanistack"
-version = "0.18.1"
+version = "0.19.0"
 description = "Organizational behavior, practiced on AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -143,6 +143,7 @@ vstack-gbrain = "vstack.gbrain.cli:main"
 vstack-bench = "vstack.benchmarks.cli:main"
 vstack-doctor = "vstack.doctor.cli:main"
 vstack-hello = "vstack.hello.cli:main"
+vstack-dashboard = "vstack.dashboard.cli:main"
 vstack-diagnose = "vstack.diagnose.cli:main"
 vstack-lewin = "vstack.lewin.cli:main"
 vstack-goleman = "vstack.goleman_ei.cli:main"
@@ -209,6 +210,7 @@ only-include = []
 "_observability/lib" = "vstack/observability"
 "_doctor/lib" = "vstack/doctor"
 "_hello/lib" = "vstack/hello"
+"_dashboard/lib" = "vstack/dashboard"
 "module-2-team/30-aar-generator/lib" = "vstack/aar"
 "module-2-team/17-lencioni-diagnostic/lib" = "vstack/lencioni"
 "module-2-team/18-trust-triangle-audit/lib" = "vstack/trust_triangle"
@@ -279,6 +281,7 @@ testpaths = [
     "_observability",
     "_doctor",
     "_hello",
+    "_dashboard",
 ]
 addopts = "-ra --tb=short --strict-markers"
 filterwarnings = [

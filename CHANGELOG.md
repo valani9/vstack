@@ -6,6 +6,101 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.19.0] — 2026-06-09
+
+Catalog + dashboard + cookbook expansion. Four substantial additions
+on top of the v0.18.x diagnose runner + MCP + REST surfaces:
+
+### Recipes catalog 8 → 34
+
+Recipes catalog grew from 8 to 33 named recipes organized into 5
+thematic clusters:
+
+- **reasoning** (12): stuck_in_loop, hallucination_cascade,
+  overconfidence_spiral, sycophancy_drift, refusal_cascade,
+  plan_collapse, premature_completion, tool_misuse, over_apology_loop,
+  anxious_overhedge, motivation_collapse, goal_misalignment.
+- **coordination** (8): agents_arguing, bottleneck_agent,
+  bad_feedback_loop, silent_dependency_drop, handoff_loss,
+  consensus_dilution, deference_cascade, expert_loafing.
+- **trust** (5): silent_failure, trust_collapse, cold_handoff,
+  performative_empathy, blame_spiral.
+- **workload** (5): context_saturation, decision_paralysis,
+  bottleneck_orchestrator, hub_spoke_fragility, role_thrash.
+- **culture** (4): culture_drift, espoused_actual_drift, policy_decay,
+  hyper_specialization.
+
+`Recipe.cluster` field + `list_recipes_by_cluster()` for CLI / UI
+sectioned listings. Each recipe's `triggers` list seeds the keyword
+router, so `recipe_for_trigger("the agent keeps apologizing in
+circles")` now returns `over_apology_loop` without manual picking.
+
+### vstack.dashboard module
+
+New dark-mode HTML report generator + FastAPI dashboard server,
+modeled after the superlog observability aesthetic:
+
+- `render_report(report)` / `render_reports_overview(reports)`:
+  self-contained HTML output with Chart.js panels (findings by
+  severity, findings by pattern, cost by pattern, per-pattern table,
+  top-N findings, error panel). Pure Python; opens in any browser.
+- `DiagnoseReport.to_html(report_id="...")`: convenience method on
+  the runner output for one-call rendering.
+- `vstack.dashboard.server.build_app()`: FastAPI app with 7 routes
+  (overview, per-run detail, pattern catalog, recipe catalog,
+  `POST /v1/reports` ingest, `GET /v1/reports` list, `/healthz`).
+- `vstack-dashboard` CLI: `render` (pipe report JSON in, HTML
+  out) + `serve` (start the dashboard server).
+- 29 tests across `_dashboard/tests/` (render, server, CLI).
+
+### Examples cookbook + shared traces
+
+`examples/_shared/traces.py`: 12 reusable synthetic agent traces
+(`stuck_in_loop_trace`, `hallucinated_citation_trace`,
+`sycophancy_trace`, `over_apology_trace`,
+`silent_dependency_drop_messages`, `groupthink_messages`,
+`silent_dissent_messages`, `social_loafing_messages`,
+`hyper_specialized_roster`, `hub_and_spoke_roster`,
+`balanced_team_roster`, `well_executed_individual_trace`).
+
+`examples/cookbook/` grew by 8 stub-driven end-to-end recipes
+demonstrating the new named-recipe expansions:
+04 hallucination_cascade, 05 sycophancy_drift, 06 over_apology_loop,
+07 silent_dependency_drop, 08 groupthink_cascade,
+09 bottleneck_orchestrator, 10 consensus_dilution,
+11 diagnose_full_walkthrough.
+
+### docs/tutorials/ markdown gallery
+
+Six new markdown walkthroughs covering the surfaces that landed in
+v0.10.0 → v0.18.0:
+01 first_diagnosis (15-minute intro),
+02 chaining_patterns (manual composition),
+03 framework_integrations (LangChain / LangGraph / CrewAI / AutoGen /
+LlamaIndex / Pydantic-AI / OpenAI Assistants),
+04 building_a_custom_pattern (full skeleton),
+05 mcp_deployment (Claude Desktop / Cursor / Cline),
+06 fastapi_deployment (production hardening).
+
+### Added
+
+- `vstack-dashboard` console script + the `vstack/dashboard/` import
+  path (force-included from `_dashboard/lib/`).
+- `Recipe.cluster` field; default value `"general"` for backward compat.
+- `vstack.diagnose.list_recipes_by_cluster()` public function.
+- `DiagnoseReport.to_html()` convenience renderer.
+
+### Compatibility
+
+- All 2,239 tests pass (1 skipped: crewai not installed). +29 dashboard
+  tests on top of v0.18.1's 2,210.
+- Wire format of all 34 patterns unchanged.
+- Public surface of `vstack.diagnose` strictly expanded (new
+  `list_recipes_by_cluster`, new `Recipe.cluster` field, new
+  `DiagnoseReport.to_html`). No removals or signature changes.
+- The 8 v0.10.0 recipes ship verbatim; the 26 new recipes are
+  pure additions.
+
 ## [0.18.1] — 2026-06-08
 
 CI hotfix on top of v0.18.0.

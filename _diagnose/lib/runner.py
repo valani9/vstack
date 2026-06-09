@@ -128,6 +128,18 @@ class DiagnoseReport:
         """Return the top-k findings by severity rank."""
         return self.findings[:k]
 
+    def to_html(self, *, report_id: str = "run", title: str | None = None) -> str:
+        """Render the report as a self-contained HTML dashboard.
+
+        Delegates to :func:`vstack.dashboard.render_report`. Open the
+        returned HTML in any browser; no server needed. For a live
+        multi-report view, use the ``vstack-dashboard serve`` CLI.
+        """
+        from vstack.dashboard import DashboardConfig, render_report
+
+        cfg = DashboardConfig(title=title) if title else None
+        return render_report(self, config=cfg, report_id=report_id)
+
     def to_markdown(self) -> str:
         """Render the report as a single self-contained Markdown
         document. The format is opinionated: an overview line, the
