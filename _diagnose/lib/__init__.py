@@ -40,6 +40,7 @@ from .recipes import (
     RECIPES,
     Recipe,
     list_recipes,
+    list_recipes_by_cluster,
     patterns_for_recipe,
     recipe_for_trigger,
 )
@@ -77,6 +78,7 @@ __all__ = [
     "extract_findings",
     "iter_bundle",
     "list_recipes",
+    "list_recipes_by_cluster",
     "patterns_for_recipe",
     "recipe_for_trigger",
     "register_adapter",
