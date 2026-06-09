@@ -6,6 +6,46 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.26.0] — 2026-06-09
+
+Two new feature modules + trace zoo expansion.
+
+### Added
+
+- **`vstack.compose`** — declarative pattern pipeline composition.
+  Fluent `Pipeline` builder with `step()`, `then()`, `when_severity()`,
+  `when()`, `callback()`, `diagnose()`, `with_baseline()`. Each
+  builder method returns a new immutable Pipeline. `run()` against
+  a trace executes the pipeline and aggregates findings into a
+  `PipelineResult` with severity summary, top-N findings, and
+  to_dict() serialization. `Stop` exception lets callbacks halt
+  early. 28 new tests.
+- **`vstack.vdiff`** — structured diff between two DiagnoseReports.
+  `diff_reports()` surfaces added/removed findings, severity
+  changes, intervention changes, and pattern additions/removals.
+  `ReportDelta.is_regression()` and `is_improvement()` for CI
+  gates. Markdown + dict serialization. 19 new tests.
+- **trace_zoo expansion** from 12 → 33 traces. New entries:
+  silent_failure, decision_paralysis, cold_handoff,
+  consensus_dilution, blame_spiral, performative_empathy,
+  handoff_loss, expert_loafing, groupthink, role_thrash,
+  hub_spoke_fragility, trust_collapse, culture_drift, grpi_break,
+  psych_safety_low, bias_stack, devils_advocate_missing,
+  smart_goal_missing, thomas_kilmann_avoiding,
+  mcgregor_x_micromanage, aar_skipped. Includes team and
+  individual shape coverage across all 5 categories.
+
+### Changed
+
+- Test count: 2,501 → 2,548 (+47 from new modules + zoo).
+- `pyproject.toml` adds `_compose`, `_vdiff` to force-include +
+  testpaths.
+
+### Compatibility
+
+- All 2,548 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.25.0] — 2026-06-09
 
 Three more feature modules: replay, vcache, otel.

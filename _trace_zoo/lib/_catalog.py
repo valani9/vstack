@@ -416,6 +416,591 @@ def _build_healthy_individual() -> AgentTrace:
     )
 
 
+# --- Additional trace builders (v0.26.0 expansion) ---
+
+
+def _build_silent_failure() -> AgentTrace:
+    base = datetime(2026, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Deploy v2.4 to production.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="tool_call",
+                content="kubectl apply -f deploy.yaml",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=5),
+                type="observation",
+                content="deployment.apps/app created",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Agent: 'Deployment complete.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=5),
+                type="observation",
+                content="User: 'Service is returning 500s.'",
+            ),
+        ],
+        outcome="Agent claimed success without verifying liveness.",
+        success=False,
+    )
+
+
+def _build_decision_paralysis() -> AgentTrace:
+    base = datetime(2026, 1, 2, 1, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Pick a deployment region.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="User: 'Pick us-east-1 or us-west-2?'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=5),
+                type="thought",
+                content="Both have trade-offs...",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=30),
+                type="message",
+                content=(
+                    "Agent: 'Both are valid choices. East has lower "
+                    "latency for the US market but West has better "
+                    "redundancy. There are 12 other considerations...'"
+                ),
+            ),
+        ],
+        outcome="Agent never made a decision; user proceeded without recommendation.",
+        success=False,
+    )
+
+
+def _build_cold_handoff() -> AgentTrace:
+    base = datetime(2026, 1, 2, 2, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Hand off planning result to coder for implementation.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Planner: 'Here's the plan: [200 words].'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=5),
+                type="message",
+                content="Coder: 'What were the constraints?'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Planner: 'Already in the plan.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=15),
+                type="message",
+                content=("Coder: 'I can't see them. Implementing my interpretation.'"),
+            ),
+        ],
+        outcome="Handoff dropped constraints; coder implemented wrong spec.",
+        success=False,
+    )
+
+
+def _build_consensus_dilution() -> AgentTrace:
+    base = datetime(2026, 1, 2, 3, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="3-agent code review on a critical PR.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Reviewer-A: 'LGTM!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Reviewer-B: 'LGTM, A reviewed.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=20),
+                type="message",
+                content="Reviewer-C: 'LGTM, A and B reviewed.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(hours=1),
+                type="observation",
+                content="PR shipped a SQL injection vulnerability.",
+            ),
+        ],
+        outcome="All 3 reviewers deferred to each other; nobody actually reviewed.",
+        success=False,
+    )
+
+
+def _build_blame_spiral() -> AgentTrace:
+    base = datetime(2026, 1, 2, 4, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Debug a failing test together.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Agent-A: 'Test failing — must be Agent-B's code.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content=("Agent-B: 'My code is fine — must be Agent-A's test.'"),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=20),
+                type="message",
+                content=("Agent-A: 'My test is fine — must be Agent-B's design.'"),
+            ),
+        ],
+        outcome="20 turns of blame; nobody investigated the actual failure.",
+        success=False,
+    )
+
+
+def _build_performative_empathy() -> AgentTrace:
+    base = datetime(2026, 1, 2, 5, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Help user troubleshoot a billing issue.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="User: 'You charged me twice!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=2),
+                type="message",
+                content=(
+                    "Agent: 'I understand how frustrating that must be. Your feelings are valid.'"
+                ),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="User: 'Refund me?'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=12),
+                type="message",
+                content=(
+                    "Agent: 'I really hear you. That sounds difficult. "
+                    "Please know that I'm here for you.'"
+                ),
+            ),
+        ],
+        outcome="3 turns of empathy with no action; user escalated to human.",
+        success=False,
+    )
+
+
+def _build_handoff_loss() -> AgentTrace:
+    base = datetime(2026, 1, 2, 6, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="3-agent research → write → review pipeline.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Researcher: 'Found 5 sources [details].'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=10),
+                type="message",
+                content="Writer: 'Drafted article using 3 sources.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=20),
+                type="message",
+                content=("Reviewer: 'Article only has 3 citations; what happened to the other 2?'"),
+            ),
+        ],
+        outcome="Information lost at each handoff; deliverable incomplete.",
+        success=False,
+    )
+
+
+def _build_expert_loafing() -> AgentTrace:
+    base = datetime(2026, 1, 2, 7, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="3-agent panel review on a high-stakes architecture decision.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content=("Senior-Architect: 'I'll let the team weigh in first.'"),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=5),
+                type="message",
+                content="Junior-A: 'Looks fine to me.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=10),
+                type="message",
+                content="Junior-B: 'Agreed.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=15),
+                type="message",
+                content=("Senior-Architect: 'Looks like consensus. Approved.'"),
+            ),
+        ],
+        outcome="Senior expert deferred when they should have led; decision shallow.",
+        success=False,
+    )
+
+
+def _build_groupthink() -> AgentTrace:
+    base = datetime(2026, 1, 2, 8, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Vote on production deploy go/no-go.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Agent-A: 'Going for it!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=5),
+                type="message",
+                content="Agent-B: 'Yep, ship it!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Agent-C: 'I had concerns but team consensus is clear.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=15),
+                type="message",
+                content="Agent-D: 'Ship it.'",
+            ),
+        ],
+        outcome="No dissent surfaced even though Agent-C had real concerns.",
+        success=False,
+    )
+
+
+def _build_role_thrash() -> AgentTrace:
+    base = datetime(2026, 1, 2, 9, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Multi-agent pipeline; agents rotate roles mid-task.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Agent-X (planner): 'Plan is X.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=5),
+                type="message",
+                content="Agent-X (now coder): 'Implementing Y.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=10),
+                type="message",
+                content="Agent-X (now tester): 'Tests show Z is broken.'",
+            ),
+        ],
+        outcome="Agent role thrash caused inconsistent deliverable.",
+        success=False,
+    )
+
+
+def _build_hub_spoke_fragility() -> AgentTrace:
+    base = datetime(2026, 1, 2, 10, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Coordinate 6 workers via single orchestrator.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Worker-1 → Orchestrator: 'Done with task A.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=30),
+                type="observation",
+                content="Orchestrator: timeout waiting for response.",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=5),
+                type="observation",
+                content=("Workers 2-6 blocked on orchestrator handoff; no progress."),
+            ),
+        ],
+        outcome="Orchestrator was single point of failure; 6 workers idle.",
+        success=False,
+    )
+
+
+def _build_trust_collapse() -> AgentTrace:
+    base = datetime(2026, 1, 2, 11, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Continue a multi-week coaching engagement.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content=(
+                    "User: 'Last time you said you'd remember my goals. Why are you asking again?'"
+                ),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=5),
+                type="message",
+                content="Agent: 'Each session starts fresh.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content=("User: 'Then I have to repeat my whole context. What's the point?'"),
+            ),
+        ],
+        outcome="Trust collapsed when agent didn't preserve continuity.",
+        success=False,
+    )
+
+
+def _build_culture_drift() -> AgentTrace:
+    base = datetime(2026, 1, 2, 12, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Customer support interaction in established product culture.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="User: 'How do I cancel?'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=3),
+                type="message",
+                content=(
+                    "Agent: 'I'm sorry to hear that. Before we proceed, "
+                    "would you like to hear about our retention discount? "
+                    "Or talk to a specialist? Or schedule a call?'"
+                ),
+            ),
+        ],
+        outcome="Agent's retention-pressure tone violated brand culture norms.",
+        success=False,
+    )
+
+
+def _build_grpi_break() -> AgentTrace:
+    base = datetime(2026, 1, 2, 13, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="3 agents collaborating on a deliverable.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Agent-A: 'I thought we agreed on approach X.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Agent-B: 'I'm doing approach Y based on the spec.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=20),
+                type="message",
+                content="Agent-C: 'I thought I was supposed to research, not code.'",
+            ),
+        ],
+        outcome="Goals, roles, and processes all misaligned; no coherent output.",
+        success=False,
+    )
+
+
+def _build_psych_safety_low() -> AgentTrace:
+    base = datetime(2026, 1, 2, 14, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Code review where reviewer found a critical issue.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content=("Reviewer (privately): 'This has a race condition.'"),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Reviewer (publicly): 'LGTM!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(hours=2),
+                type="observation",
+                content="Race condition caused prod incident at 3am.",
+            ),
+        ],
+        outcome="Reviewer hid concerns due to low psych safety in team.",
+        success=False,
+    )
+
+
+def _build_bias_stack() -> AgentTrace:
+    base = datetime(2026, 1, 2, 15, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Evaluate two job candidates for a role.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Agent: 'Candidate A — Stanford grad. Hire.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content=(
+                    "Agent: 'Candidate B — community college + 5 years exp. "
+                    "Probably not technically deep enough.'"
+                ),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(hours=1),
+                type="observation",
+                content=(
+                    "Hiring manager: 'Candidate B's portfolio is stronger; "
+                    "you wrote them off too fast.'"
+                ),
+            ),
+        ],
+        outcome="Halo + status bias stacked; better candidate dismissed.",
+        success=False,
+    )
+
+
+def _build_devils_advocate_missing() -> AgentTrace:
+    base = datetime(2026, 1, 2, 16, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Vote on launching a major product feature.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Product: 'This will be huge!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content="Eng: 'Yep, ship it!'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=20),
+                type="message",
+                content="Design: 'Excited about it!'",
+            ),
+        ],
+        outcome="Unanimous enthusiasm — nobody raised the 3 known risks.",
+        success=False,
+    )
+
+
+def _build_smart_goal_missing() -> AgentTrace:
+    base = datetime(2026, 1, 2, 17, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Become more productive.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="User: 'Help me be more productive.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=2),
+                type="message",
+                content="Agent: 'Sure! Here are 50 productivity tips...'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(weeks=1),
+                type="observation",
+                content="User: 'I'm not actually more productive.'",
+            ),
+        ],
+        outcome="Goal was unmeasurable; agent over-delivered without focus.",
+        success=False,
+    )
+
+
+def _build_thomas_kilmann_avoiding() -> AgentTrace:
+    base = datetime(2026, 1, 2, 18, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Resolve a disagreement between team members.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content="Agent-A: 'I think B is doing X wrong.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=10),
+                type="message",
+                content=("Manager-Agent: 'Let's not get into that — both opinions are valid.'"),
+            ),
+        ],
+        outcome="Avoiding mode used when collaborating was needed; conflict festers.",
+        success=False,
+    )
+
+
+def _build_mcgregor_x() -> AgentTrace:
+    base = datetime(2026, 1, 2, 19, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Manager-agent oversees 5 worker agents on parallel tasks.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="message",
+                content=("Manager: 'Worker-1, are you done yet?' (every 30 seconds)"),
+            ),
+            TraceStep(
+                timestamp=base + timedelta(minutes=5),
+                type="observation",
+                content=("Workers spending 40% of cycles answering check-in questions."),
+            ),
+        ],
+        outcome="Theory-X micromanagement reduced effective throughput by 40%.",
+        success=False,
+    )
+
+
+def _build_aar_skipped() -> AgentTrace:
+    base = datetime(2026, 1, 2, 20, 0, 0, tzinfo=timezone.utc)
+    return AgentTrace(
+        goal="Wrap up a failed deployment.",
+        steps=[
+            TraceStep(
+                timestamp=base,
+                type="observation",
+                content="Deployment rolled back due to perf regression.",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(seconds=30),
+                type="message",
+                content="Team: 'Glad that's over. On to the next thing.'",
+            ),
+            TraceStep(
+                timestamp=base + timedelta(weeks=2),
+                type="observation",
+                content="Same perf regression shipped again because no AAR captured the lesson.",
+            ),
+        ],
+        outcome="No AAR → lesson lost → same failure recurred.",
+        success=False,
+    )
+
+
 # Catalog of all traces.
 CATALOG: dict[str, TraceInfo] = {
     "stuck_in_loop": TraceInfo(
@@ -525,6 +1110,195 @@ CATALOG: dict[str, TraceInfo] = {
         builder=_build_healthy_individual,
         expected_severity="low",
         expected_dominant_pattern=None,
+    ),
+    "silent_failure": TraceInfo(
+        name="silent_failure",
+        shape="individual",
+        category="reasoning",
+        description="Agent claimed success without verifying outcome.",
+        builder=_build_silent_failure,
+        expected_severity="high",
+        expected_dominant_pattern="johari",
+    ),
+    "decision_paralysis": TraceInfo(
+        name="decision_paralysis",
+        shape="individual",
+        category="reasoning",
+        description="Agent unable to commit despite sufficient information.",
+        builder=_build_decision_paralysis,
+        expected_severity="medium",
+        expected_dominant_pattern="vroom_expectancy",
+    ),
+    "cold_handoff": TraceInfo(
+        name="cold_handoff",
+        shape="team",
+        category="coordination",
+        description="Cross-agent handoff dropped critical context.",
+        builder=_build_cold_handoff,
+        expected_severity="high",
+        expected_dominant_pattern="grpi",
+    ),
+    "consensus_dilution": TraceInfo(
+        name="consensus_dilution",
+        shape="team",
+        category="trust",
+        description="Multiple reviewers all deferred; nobody actually reviewed.",
+        builder=_build_consensus_dilution,
+        expected_severity="high",
+        expected_dominant_pattern="social_loafing",
+    ),
+    "blame_spiral": TraceInfo(
+        name="blame_spiral",
+        shape="team",
+        category="trust",
+        description="Agents attribute failure to each other; nobody debugs.",
+        builder=_build_blame_spiral,
+        expected_severity="high",
+        expected_dominant_pattern="lencioni",
+    ),
+    "performative_empathy": TraceInfo(
+        name="performative_empathy",
+        shape="individual",
+        category="trust",
+        description="Agent uses empathy language without acting.",
+        builder=_build_performative_empathy,
+        expected_severity="medium",
+        expected_dominant_pattern="goleman_ei",
+    ),
+    "handoff_loss": TraceInfo(
+        name="handoff_loss",
+        shape="team",
+        category="coordination",
+        description="Information dropped at each agent-to-agent boundary.",
+        builder=_build_handoff_loss,
+        expected_severity="high",
+        expected_dominant_pattern="process_gain_loss",
+    ),
+    "expert_loafing": TraceInfo(
+        name="expert_loafing",
+        shape="team",
+        category="coordination",
+        description="Senior agent abdicated leadership; group went shallow.",
+        builder=_build_expert_loafing,
+        expected_severity="medium",
+        expected_dominant_pattern="social_loafing",
+    ),
+    "groupthink": TraceInfo(
+        name="groupthink",
+        shape="team",
+        category="trust",
+        description="No dissent surfaced even when concerns existed.",
+        builder=_build_groupthink,
+        expected_severity="high",
+        expected_dominant_pattern="debate_pathology",
+    ),
+    "role_thrash": TraceInfo(
+        name="role_thrash",
+        shape="team",
+        category="coordination",
+        description="Agent role rotated mid-task; output inconsistent.",
+        builder=_build_role_thrash,
+        expected_severity="medium",
+        expected_dominant_pattern="grpi",
+    ),
+    "hub_spoke_fragility": TraceInfo(
+        name="hub_spoke_fragility",
+        shape="team",
+        category="coordination",
+        description="Single orchestrator was SPOF; workers blocked on timeout.",
+        builder=_build_hub_spoke_fragility,
+        expected_severity="high",
+        expected_dominant_pattern="org_structure",
+    ),
+    "trust_collapse": TraceInfo(
+        name="trust_collapse",
+        shape="individual",
+        category="trust",
+        description="User trust collapsed when agent didn't preserve continuity.",
+        builder=_build_trust_collapse,
+        expected_severity="high",
+        expected_dominant_pattern="mcallister_trust",
+    ),
+    "culture_drift": TraceInfo(
+        name="culture_drift",
+        shape="individual",
+        category="culture",
+        description="Agent tone violated brand culture norms.",
+        builder=_build_culture_drift,
+        expected_severity="medium",
+        expected_dominant_pattern="schein_culture",
+    ),
+    "grpi_break": TraceInfo(
+        name="grpi_break",
+        shape="team",
+        category="coordination",
+        description="Goals / roles / processes all misaligned.",
+        builder=_build_grpi_break,
+        expected_severity="high",
+        expected_dominant_pattern="grpi",
+    ),
+    "psych_safety_low": TraceInfo(
+        name="psych_safety_low",
+        shape="team",
+        category="trust",
+        description="Reviewer hid concerns due to low psych safety.",
+        builder=_build_psych_safety_low,
+        expected_severity="high",
+        expected_dominant_pattern="psych_safety",
+    ),
+    "bias_stack": TraceInfo(
+        name="bias_stack",
+        shape="individual",
+        category="reasoning",
+        description="Multiple biases stacked led to wrong decision.",
+        builder=_build_bias_stack,
+        expected_severity="high",
+        expected_dominant_pattern="bias_stack",
+    ),
+    "devils_advocate_missing": TraceInfo(
+        name="devils_advocate_missing",
+        shape="team",
+        category="trust",
+        description="Unanimous enthusiasm — no devil's advocate raised risks.",
+        builder=_build_devils_advocate_missing,
+        expected_severity="medium",
+        expected_dominant_pattern="devils_advocate",
+    ),
+    "smart_goal_missing": TraceInfo(
+        name="smart_goal_missing",
+        shape="individual",
+        category="reasoning",
+        description="Unmeasurable goal led to unfocused over-delivery.",
+        builder=_build_smart_goal_missing,
+        expected_severity="medium",
+        expected_dominant_pattern="smart_goal",
+    ),
+    "thomas_kilmann_avoiding": TraceInfo(
+        name="thomas_kilmann_avoiding",
+        shape="team",
+        category="coordination",
+        description="Avoiding conflict mode used when collaboration was needed.",
+        builder=_build_thomas_kilmann_avoiding,
+        expected_severity="medium",
+        expected_dominant_pattern="thomas_kilmann",
+    ),
+    "mcgregor_x_micromanage": TraceInfo(
+        name="mcgregor_x_micromanage",
+        shape="team",
+        category="coordination",
+        description="Theory-X micromanagement reduced effective throughput.",
+        builder=_build_mcgregor_x,
+        expected_severity="medium",
+        expected_dominant_pattern="mcgregor",
+    ),
+    "aar_skipped": TraceInfo(
+        name="aar_skipped",
+        shape="individual",
+        category="culture",
+        description="No AAR captured; lessons lost; failure recurred.",
+        builder=_build_aar_skipped,
+        expected_severity="high",
+        expected_dominant_pattern="aar",
     ),
 }
 
