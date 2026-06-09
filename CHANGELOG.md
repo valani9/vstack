@@ -6,6 +6,40 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.25.0] — 2026-06-09
+
+Three more feature modules: replay, vcache, otel.
+
+### Added
+
+- **`vstack.replay`** — replay historical diagnose() runs from
+  JSONL logs without re-spending LLM calls. ``ReplayRecorder``
+  wraps any client to capture request/response pairs to disk.
+  ``ReplayClient`` reads the JSONL log and returns canned responses
+  on hash match. Strict mode raises ``ReplayMissError`` on miss;
+  permissive mode falls back to sequential matching. Use for
+  regression testing, pattern development, and CI gates.
+- **`vstack.vcache`** — LLM response cache with TTL + LRU eviction.
+  ``LLMCache`` wraps any client and dedupes identical requests.
+  Per-namespace isolation, configurable capacity and TTL, hit/miss
+  stats with cost-saved tracking.
+- **`vstack.otel`** — OpenTelemetry exporter. ``setup_otel()``
+  configures the OTLP exporter; spans auto-emit on every
+  ``diagnose()`` run and pattern call. ``OTelInstrumentedClient``
+  wraps any LLM client to emit spans on every chat call. Graceful
+  no-op if OTel isn't installed.
+
+### Changed
+
+- Test count: 2,450 → 2,501 (+51 from the three new modules).
+- `pyproject.toml` adds `_replay`, `_vcache`, `_otel` to force-
+  include + testpaths.
+
+### Compatibility
+
+- All 2,501 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.24.0] — 2026-06-09
 
 Three new feature modules: scorecard, budget, trace_zoo.
