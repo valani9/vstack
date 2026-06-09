@@ -6,6 +6,55 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.36.0] — 2026-06-09
+
+Five more feature modules: redaction + health + priority_queue +
+snippet + aggregate. Thirty-four feature modules total since v0.23.0.
+
+### Added
+
+- **`vstack.redaction`** — PII / secret scrubbing for traces.
+  `RedactionPattern` (regex + replacement); built-in
+  `DEFAULT_PATTERNS` covering email, US/CA phone, SSN, credit card,
+  AWS access/secret keys, sk-prefixed API keys, Bearer tokens, JWT,
+  IPv4, URLs with user:pass@ credentials. `Redactor` tracks per-
+  pattern match counts; `scrub_trace()` returns a redacted copy of
+  the trace with goal/outcome/step content scrubbed (original
+  unmutated).
+- **`vstack.health`** — composite health checks. `Check` protocol +
+  `CallableCheck` adapter. `HealthReport` aggregates with
+  HEALTHY / DEGRADED / UNHEALTHY status (critical UNHEALTHY →
+  UNHEALTHY; non-critical UNHEALTHY → DEGRADED). `HealthMonitor`
+  with `tick()` (interval-aware) + `force_tick()` for scheduler-
+  driven probes.
+- **`vstack.priority_queue`** — finding priority queue with aging
+  boost. `FindingPriorityQueue` heap-backed; score = severity_weight
+  (high=100/med=10/low=1) × confidence_multiplier (0.5-1.0) +
+  age_boost (aging_multiplier × hours_elapsed) + manual_boost.
+  `boost()` / `remove_pattern()` / `snapshot()` helpers. Aging
+  prevents low-severity starvation.
+- **`vstack.snippet`** — minimal trace excerpts. `find_relevant_steps()`
+  uses token-overlap (lowercase, stopword-filtered, ≥3 chars)
+  between finding text and step content. `extract_snippet()` pulls
+  N context steps around relevant steps with omission counts.
+  `render_snippet()` produces markdown with `→` markers on relevant
+  steps + elision for long content.
+- **`vstack.aggregate`** — cross-report aggregation. `aggregate_reports()`
+  returns `AggregateSummary` with per-pattern stats (high/med/low
+  + severity_score), severity_counts, agent_counts.
+  `top_n_patterns()` / `top_n_agents()` (optionally severity-
+  filtered), `severity_distribution()`, `cooccurrence_matrix()`
+  (pairs that appear in the same report).
+
+### Changed
+
+- Test count: 3,014 → 3,127 (+113 from the five new modules).
+
+### Compatibility
+
+- All 3,127 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.35.0] — 2026-06-09
 
 Three more feature modules: alerting + eval_gates + intervention_tracker.
