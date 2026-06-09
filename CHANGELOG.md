@@ -6,6 +6,35 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.32.0] — 2026-06-09
+
+Two more feature modules: budgeter + tracer. Twenty feature
+modules total since v0.23.0.
+
+### Added
+
+- **`vstack.budgeter`** — cost projection + multi-tier budget
+  alerts. Companion to `vstack.budget` for monthly-budget
+  forecasting. `Budgeter` tracks spend events, projects monthly
+  total at current burn rate, computes days-until-limit, and
+  fires once-each multi-tier alerts at 50/75/90/100% thresholds
+  (configurable). `forecast_burn()` helper for one-shot
+  projections.
+- **`vstack.tracer`** — inline trace recorder for live agents.
+  Fluent `Tracer` builder with `thought()` / `tool_call()` /
+  `observation()` / `message()` / `decision()` methods, chainable
+  return-self pattern. Context manager support: exits mark
+  failure on exception. `finalize()` produces an `AgentTrace`.
+
+### Changed
+
+- Test count: 2,761 → 2,799 (+38 from the two new modules).
+
+### Compatibility
+
+- All 2,799 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.31.0] — 2026-06-09
 
 Two more feature modules: heatmap + policy. Eighteen feature
