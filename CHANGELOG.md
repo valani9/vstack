@@ -6,6 +6,37 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.31.0] — 2026-06-09
+
+Two more feature modules: heatmap + policy. Eighteen feature
+modules total since v0.23.0.
+
+### Added
+
+- **`vstack.heatmap`** — ASCII + HTML heatmap visualization.
+  `build_pattern_dimension_grid()` produces pattern × dimension
+  grids; `build_pattern_trace_grid()` produces pattern × trace
+  grids. `render_heatmap()` outputs ASCII art with intensity
+  ramp; `render_heatmap_html()` produces a color-graded HTML
+  table (HSL green→red gradient).
+- **`vstack.policy`** — declarative finding-action policies.
+  `Rule` matches findings on pattern / severity / confidence
+  (exact / list / range). `Action` subclasses: `ActionLog`,
+  `ActionAlert`, `ActionPage`, `ActionEscalate`, `ActionIgnore`,
+  `ActionCustom`. `Policy` evaluates rules in order; first match
+  wins; default_action for unmatched findings. `evaluate_policy()`
+  produces ordered `Decision` list. Range matches use
+  `{"min": 0.7, "max": 1.0}`.
+
+### Changed
+
+- Test count: 2,719 → 2,761 (+42 from the two new modules).
+
+### Compatibility
+
+- All 2,761 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.30.0] — 2026-06-09
 
 Two more feature modules: veval + recipes_dsl. Sixteen feature
