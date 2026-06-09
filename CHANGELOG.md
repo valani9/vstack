@@ -6,6 +6,42 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.27.0] — 2026-06-09
+
+Two more feature modules: calibrate + streaming.
+
+### Added
+
+- **`vstack.calibrate`** — confidence calibration curves.
+  Pure-Python implementations of:
+    - `IsotonicCalibration`: classical pool-adjacent-violators
+      isotonic regression. Monotonic by construction. Block
+      aggregation algorithm.
+    - `PlattCalibration`: σ(ax+b) sigmoid calibration. Gradient
+      descent on log loss.
+    - `CalibrationMetrics`: Brier score, log loss, expected
+      calibration error (ECE).
+    - `evaluate_calibration()`: compute all metrics in one pass.
+  Curves are JSON-serializable. No dependency on sklearn/scipy.
+- **`vstack.streaming`** — SSE-friendly event stream for live
+  diagnoses. `EventStream` emits `run_started` / `pattern_started`
+  / `finding_emitted` / `pattern_completed` / `run_completed` /
+  `error` events. Listener registration (decorator + add_listener),
+  wildcard listeners, queue-based iteration, exception-swallowing
+  for safe broadcast. `SSEStreamWriter` converts events to
+  Server-Sent Events format for HTTP streaming.
+
+### Changed
+
+- Test count: 2,548 → 2,588 (+40 from the two new modules).
+- `pyproject.toml` adds `_calibrate`, `_streaming` to force-
+  include + testpaths.
+
+### Compatibility
+
+- All 2,588 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded.
+
 ## [0.26.0] — 2026-06-09
 
 Two new feature modules + trace zoo expansion.
