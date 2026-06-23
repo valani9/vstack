@@ -31,10 +31,14 @@ import json
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence, cast
 
 from .registry import ALL_SHAPES, PATTERNS
 from .runner import diagnose as _diagnose
+
+# Mirrors vstack.aar.TraceStep.type. Kept local so the CLI does not import
+# the AAR module at load time (it is imported lazily inside the builders).
+StepType = Literal["tool_call", "message", "decision", "observation", "thought"]
 
 
 def _load_trace(path: str | None) -> dict[str, Any]:
@@ -52,14 +56,14 @@ def _load_trace(path: str | None) -> dict[str, Any]:
                 "or pass --trace <path>."
             )
         try:
-            return json.loads(raw)
+            return cast("dict[str, Any]", json.loads(raw))
         except json.JSONDecodeError as exc:
             raise SystemExit(f"vstack-diagnose: stdin is not valid JSON ({exc}).")
     p = Path(path)
     if not p.exists():
         raise SystemExit(f"vstack-diagnose: trace file not found: {path}")
     try:
-        return json.loads(p.read_text())
+        return cast("dict[str, Any]", json.loads(p.read_text()))
     except json.JSONDecodeError as exc:
         raise SystemExit(f"vstack-diagnose: {path} is not valid JSON ({exc}).")
 
@@ -107,10 +111,19 @@ def _build_trace_object(payload: dict[str, Any]) -> Any:
         # required fields (timestamp / type / content) from sensible
         # defaults if the caller did not supply them, so a quick smoke
         # test of {"action": "edit"} still produces a usable trace.
-        timestamp = s.get("timestamp") or datetime.now(timezone.utc).isoformat()
-        step_type = s.get("type") or _guess_step_type(s)
+        # TraceStep is a pydantic model: it coerces ISO-8601 strings to
+        # ``datetime`` and validates ``type`` against its Literal at
+        # construction, so the cast below states the contract pydantic
+        # actually enforces on these runtime values.
+        raw_timestamp = s.get("timestamp")
+        timestamp: datetime = (
+            cast(datetime, raw_timestamp) if raw_timestamp else datetime.now(timezone.utc)
+        )
+        step_type: StepType = cast(StepType, s.get("type")) or _guess_step_type(s)
         content = s.get("content") or s.get("note") or s.get("action") or f"step {i + 1}"
-        kept = {k: v for k, v in s.items() if k in {"metadata", "parent_step_id", "step_id"}}
+        kept: dict[str, Any] = {
+            k: v for k, v in s.items() if k in {"metadata", "parent_step_id", "step_id"}
+        }
         return TraceStep(
             timestamp=timestamp,
             type=step_type,
@@ -127,7 +140,7 @@ def _build_trace_object(payload: dict[str, Any]) -> Any:
     )
 
 
-def _guess_step_type(s: dict[str, Any]) -> str:
+def _guess_step_type(s: dict[str, Any]) -> StepType:
     """Map free-form step dicts to the AAR's TraceStep.type literal.
 
     The mapping is opinionated but documented so users who care about

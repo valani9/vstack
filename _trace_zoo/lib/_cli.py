@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from typing import Callable, cast
 
 from ._catalog import (
     CATALOG,
@@ -20,9 +21,9 @@ from ._catalog import (
 def cmd_list(args: argparse.Namespace) -> int:
     """vstack-trace-zoo list [--category X] [--shape Y]"""
     if args.category:
-        infos = list_traces_by_category(args.category)  # type: ignore[arg-type]
+        infos = list_traces_by_category(args.category)
     elif args.shape:
-        infos = list_traces_by_shape(args.shape)  # type: ignore[arg-type]
+        infos = list_traces_by_shape(args.shape)
     else:
         infos = [info for _, info in list_traces()]
 
@@ -159,7 +160,8 @@ def main(argv: list[str] | None = None) -> int:
     p_sh.set_defaults(func=cmd_shapes)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    func = cast(Callable[[argparse.Namespace], int], args.func)
+    return func(args)
 
 
 if __name__ == "__main__":

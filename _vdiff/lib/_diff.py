@@ -9,7 +9,7 @@ from typing import Any
 _SEVERITY_ORDER = {"low": 0, "medium": 1, "high": 2}
 
 
-def _get_findings(report: Any) -> list[dict]:
+def _get_findings(report: Any) -> list[dict[str, Any]]:
     if isinstance(report, dict):
         return list(report.get("findings", []))
     if hasattr(report, "findings"):
@@ -37,14 +37,14 @@ def _finding_key(finding: Any) -> tuple[str, str]:
 
 def _get_severity(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("severity", "low")
-    return getattr(finding, "severity", "low")
+        return str(finding.get("severity", "low"))
+    return str(getattr(finding, "severity", "low"))
 
 
 def _get_intervention(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("intervention", "")
-    return getattr(finding, "intervention", "")
+        return str(finding.get("intervention", ""))
+    return str(getattr(finding, "intervention", ""))
 
 
 @dataclass

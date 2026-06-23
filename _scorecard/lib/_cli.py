@@ -5,12 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast, get_args
 
 from ._compare import compare_scorecards, is_blocking_regression
-from ._compute import ScoreCard, ScoreCardConfig, compute_scorecard
+from ._compute import DimensionName, ScoreCard, ScoreCardConfig, compute_scorecard
 from ._render import render_html, render_markdown, render_text
+
+_DIMENSION_NAMES: frozenset[str] = frozenset(get_args(DimensionName))
 
 
 def _load_reports(path: str) -> list[Any]:
@@ -28,7 +31,10 @@ def _save_scorecard(scorecard: ScoreCard, path: str) -> None:
 
 
 def _load_scorecard_dict(path: str) -> dict[str, Any]:
-    return json.loads(Path(path).read_text())
+    data: object = json.loads(Path(path).read_text())
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected a JSON object in {path}")
+    return cast(dict[str, Any], data)
 
 
 def cmd_compute(args: argparse.Namespace) -> int:
@@ -96,10 +102,13 @@ def _scorecard_from_dict(data: dict[str, Any]) -> ScoreCard:
     from ._compute import DimensionScore, PatternContribution
 
     config = ScoreCardConfig(title=data.get("metadata", {}).get("title"))
-    dimensions: dict[str, DimensionScore] = {}
-    for name, d in data.get("dimensions", {}).items():
-        dimensions[name] = DimensionScore(  # type: ignore[arg-type]
-            name=name,  # type: ignore[arg-type]
+    dimensions: dict[DimensionName, DimensionScore] = {}
+    for raw_name, d in data.get("dimensions", {}).items():
+        if raw_name not in _DIMENSION_NAMES:
+            raise ValueError(f"Unknown dimension name: {raw_name!r}")
+        name = cast(DimensionName, raw_name)
+        dimensions[name] = DimensionScore(
+            name=name,
             score=d["score"],
             contributing_patterns=d.get("contributing_patterns", []),
             findings_count=d.get("findings_count", 0),
@@ -121,7 +130,7 @@ def _scorecard_from_dict(data: dict[str, Any]) -> ScoreCard:
     ]
 
     return ScoreCard(
-        dimensions=dimensions,  # type: ignore[arg-type]
+        dimensions=dimensions,
         pattern_contributions=contributions,
         config=config,
         metadata=data.get("metadata", {}),
@@ -198,7 +207,8 @@ def main(argv: list[str] | None = None) -> int:
     p_compare.set_defaults(func=cmd_compare)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    func = cast("Callable[[argparse.Namespace], int]", args.func)
+    return func(args)
 
 
 if __name__ == "__main__":

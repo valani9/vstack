@@ -6,6 +6,30 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.38.0] — 2026-06-23
+
+Type-safety completion: every feature module is now `mypy --strict` clean
+and gated in CI.
+
+### Changed
+
+- **All 36 feature modules now pass `mypy --strict`.** v0.37.0 added 12 of
+  them to the CI mypy matrix; this release fixes the type annotations in the
+  remaining 24 (`_diagnose`, `_dashboard`, `_scorecard`, `_budget`,
+  `_trace_zoo`, `_replay`, `_vcache`, `_otel`, `_compose`, `_vdiff`,
+  `_vbench`, `_markers`, `_synth`, `_veval`, `_recipes_dsl`, `_heatmap`,
+  `_policy`, `_budgeter`, `_tracer`, `_export`, `_findings_db`, `_timeline`,
+  `_eval_gates`, `_intervention_tracker`) and adds them to the CI matrix.
+  107 type errors resolved with **proper annotations — zero new
+  `# type: ignore`** and no runtime behavior changes.
+- The CI `Typecheck (mypy)` job now covers the full surface: 15 original
+  surface dirs + all 36 feature modules + 34 pattern libs.
+
+### Compatibility
+
+- All 3,131 tests pass (1 skipped: crewai not installed). Typing-only
+  changes; public API and runtime behavior unchanged.
+
 ## [0.37.0] — 2026-06-23
 
 Packaging fix + two new Claude Code skills + a documentation truth-up

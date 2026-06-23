@@ -7,8 +7,16 @@ HTML rendering is for the dashboard.
 
 from __future__ import annotations
 
-from ._compute import ScoreCard
+from ._compute import DimensionName, ScoreCard
 from ._grade import grade_to_color, grade_to_emoji
+
+DIMENSION_ORDER: tuple[DimensionName, ...] = (
+    "reasoning",
+    "coordination",
+    "trust",
+    "workload",
+    "culture",
+)
 
 
 def render_text(scorecard: ScoreCard) -> str:
@@ -24,7 +32,7 @@ def render_text(scorecard: ScoreCard) -> str:
 
     lines.append(f"{'Dimension':15s}  {'Score':>6s}  {'Grade':>5s}  Findings")
     lines.append(f"{'-' * 15}  {'-' * 6}  {'-' * 5}  --------")
-    for name in ("reasoning", "coordination", "trust", "workload", "culture"):
+    for name in DIMENSION_ORDER:
         d = scorecard.get_dimension(name)
         if d is None:
             continue
@@ -68,7 +76,7 @@ def render_markdown(scorecard: ScoreCard) -> str:
     lines.append("")
     lines.append("| Dimension     | Score   | Grade | Findings |")
     lines.append("|---------------|---------|-------|----------|")
-    for name in ("reasoning", "coordination", "trust", "workload", "culture"):
+    for name in DIMENSION_ORDER:
         d = scorecard.get_dimension(name)
         if d is None:
             continue
@@ -199,10 +207,7 @@ def render_html(scorecard: ScoreCard) -> str:
             color=grade_to_color(d.grade),
             findings=d.findings_count,
         )
-        for d in [
-            scorecard.get_dimension(n)
-            for n in ("reasoning", "coordination", "trust", "workload", "culture")
-        ]
+        for d in [scorecard.get_dimension(n) for n in DIMENSION_ORDER]
         if d is not None
     )
 

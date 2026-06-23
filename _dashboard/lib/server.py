@@ -157,7 +157,7 @@ def build_app(
             f"<th class='px-3 py-3 font-medium'>Summary</th></tr></thead>"
             f"<tbody>{''.join(rows)}</tbody></table></div></main>"
         )
-        from .render import _head, _layout, _nav  # type: ignore[attr-defined]
+        from .render import _head, _layout, _nav
 
         return HTMLResponse(content=_layout(head=_head(cfg), body=_nav(cfg) + body))
 
@@ -198,7 +198,7 @@ def build_app(
             f"</section>"
             f"<main class='max-w-7xl mx-auto px-6 pb-16'>{''.join(sections)}</main>"
         )
-        from .render import _head, _layout, _nav  # type: ignore[attr-defined]
+        from .render import _head, _layout, _nav
 
         return HTMLResponse(content=_layout(head=_head(cfg), body=_nav(cfg) + body))
 

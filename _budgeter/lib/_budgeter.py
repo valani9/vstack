@@ -32,7 +32,7 @@ class BudgetForecast:
     def projected_overrun_usd(self) -> float:
         return max(0.0, self.projected_total_usd - self.monthly_budget_usd)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, float | None]:
         return {
             "current_spend_usd": self.current_spend_usd,
             "monthly_budget_usd": self.monthly_budget_usd,
@@ -55,7 +55,7 @@ class BudgetAlert:
     monthly_budget_usd: float
     message: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, float | str]:
         return {
             "threshold": self.threshold,
             "current_utilization": self.current_utilization,

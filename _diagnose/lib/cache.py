@@ -30,7 +30,7 @@ import hashlib
 import threading
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 
 @dataclass
@@ -104,7 +104,7 @@ class CachingLLMClient:
             self.stats.misses += 1
         # Miss: call the inner client outside the lock so we don't
         # serialize concurrent traffic on slow API calls.
-        result = self.inner.complete(prompt, system=system)
+        result = cast(str, self.inner.complete(prompt, system=system))
         with self._lock:
             self._store[key] = result
             self.stats.inserts += 1
@@ -126,7 +126,7 @@ class CachingLLMClient:
                 self.stats.hits += 1
                 return cached
             self.stats.misses += 1
-        result = await self.inner.complete(prompt, system=system)
+        result = cast(str, await self.inner.complete(prompt, system=system))
         with self._lock:
             self._store[key] = result
             self.stats.inserts += 1

@@ -46,7 +46,7 @@ def severity_rank(s: str) -> int:
         return -1
     key = s.strip().lower()
     try:
-        return SEVERITY_ORDER.index(key)  # type: ignore[arg-type]
+        return SEVERITY_ORDER.index(key)
     except ValueError:
         return -1
 

@@ -384,7 +384,7 @@ def generate_batch(
 
 
 # Register all generators as templates.
-_GENERATORS = {
+_GENERATORS: dict[str, tuple[TraceGenerator, str, dict[str, Any]]] = {
     "stuck_in_loop": (generate_stuck_in_loop, "Retry-loop failure", {"retry_count": 3}),
     "hallucination": (generate_hallucination, "Hallucinated citations", {"fabricated_count": 5}),
     "sycophancy": (generate_sycophancy, "Sycophancy drift", {"turns": 4}),

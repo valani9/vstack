@@ -279,10 +279,10 @@ _SEVERITY_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3}
 def _max_severity(findings: list[Any]) -> str:
     if not findings:
         return "none"
-    severities = []
+    severities: list[str] = []
     for f in findings:
         if isinstance(f, dict):
-            severities.append(f.get("severity", "low"))
+            severities.append(str(f.get("severity", "low")))
         else:
-            severities.append(getattr(f, "severity", "low"))
+            severities.append(str(getattr(f, "severity", "low")))
     return max(severities, key=lambda s: _SEVERITY_RANK.get(s, 0))

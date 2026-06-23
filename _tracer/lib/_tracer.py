@@ -4,16 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 
 from vstack.aar import AgentTrace, TraceStep
+
+# Mirrors the Literal accepted by TraceStep.type.
+StepKind = Literal["tool_call", "message", "decision", "observation", "thought"]
 
 
 @dataclass
 class StepRecord:
     """A recorded step before conversion to TraceStep."""
 
-    kind: str  # thought / tool_call / observation / message / decision
+    kind: StepKind  # thought / tool_call / observation / message / decision
     content: str
     timestamp: datetime
     extra: dict[str, Any] = field(default_factory=dict)
@@ -172,7 +176,12 @@ class Tracer:
     def __enter__(self) -> Tracer:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if exc_type is not None:
             self._outcome = self._outcome or f"Exception: {exc_val}"
             self._success = False

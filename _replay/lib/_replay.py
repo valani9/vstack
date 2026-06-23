@@ -68,7 +68,7 @@ class ReplayEntry:
         return result
 
 
-def hash_request(messages: list[dict], **kwargs: Any) -> str:
+def hash_request(messages: list[dict[str, Any]], **kwargs: Any) -> str:
     """Canonical hash of an LLM request.
 
     The hash is stable across runs of the same script: messages are
@@ -87,14 +87,14 @@ def hash_request(messages: list[dict], **kwargs: Any) -> str:
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
-def _canonicalize_messages(messages: list[dict]) -> list[dict]:
+def _canonicalize_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Normalize message shape for hashing — strip extras, sort keys."""
-    out = []
+    out: list[dict[str, Any]] = []
     for m in messages:
         if not isinstance(m, dict):
             out.append({"content": str(m)})
             continue
-        normalized = {}
+        normalized: dict[str, Any] = {}
         for k in sorted(m.keys()):
             v = m[k]
             if isinstance(v, list):
@@ -166,7 +166,7 @@ class ReplayClient:
         entries = load_run_log(path)
         return cls(entries, **kwargs)
 
-    def chat(self, messages: list[dict], **kwargs: Any) -> _ChatResult:
+    def chat(self, messages: list[dict[str, Any]], **kwargs: Any) -> _ChatResult:
         h = hash_request(messages, **kwargs)
         entries = self._entries_by_hash.get(h)
 
@@ -196,7 +196,7 @@ class ReplayClient:
         self.hits += 1
         return _result_from_entry(entry)
 
-    async def achat(self, messages: list[dict], **kwargs: Any) -> _ChatResult:
+    async def achat(self, messages: list[dict[str, Any]], **kwargs: Any) -> _ChatResult:
         return self.chat(messages, **kwargs)
 
     def stats(self) -> dict[str, int]:

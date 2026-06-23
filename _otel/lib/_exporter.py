@@ -6,11 +6,17 @@ installed. All public functions are safe to call without OTel.
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from typing import Any
+from contextlib import AbstractContextManager, contextmanager
+from types import TracebackType
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from opentelemetry.trace import Span, Tracer
 
 # Lazy import — OTel is optional.
-_tracer: Any = None
+_tracer: Tracer | None = None
 _otel_available: bool | None = None
 
 
@@ -98,10 +104,10 @@ class OTelSpanContext:
     def __init__(self, name: str, attributes: dict[str, Any] | None = None):
         self.name = name
         self.attributes = attributes or {}
-        self._span = None
-        self._cm = None
+        self._span: Span | None = None
+        self._cm: AbstractContextManager[Span] | None = None
 
-    def __enter__(self):
+    def __enter__(self) -> OTelSpanContext:
         if _tracer is None:
             return self
 
@@ -111,9 +117,14 @@ class OTelSpanContext:
             self._span.set_attribute(k, _coerce_attr(v))
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self._cm is not None:
-            if exc_type is not None and self._span is not None:
+            if self._span is not None and exc_val is not None:
                 self._span.record_exception(exc_val)
             self._cm.__exit__(exc_type, exc_val, exc_tb)
 
@@ -141,7 +152,7 @@ def start_run_span(
     pattern_count: int | None = None,
     shape: str | None = None,
     run_id: str | None = None,
-):
+) -> Iterator[OTelSpanContext]:
     """Start a span for a diagnose() run."""
     attrs: dict[str, Any] = {"vstack.span_type": "run"}
     if recipe:
@@ -163,7 +174,7 @@ def start_pattern_span(
     pattern: str,
     mode: str = "standard",
     run_id: str | None = None,
-):
+) -> Iterator[OTelSpanContext]:
     """Start a span for a single pattern analyzer call."""
     attrs: dict[str, Any] = {
         "vstack.span_type": "pattern",
@@ -182,7 +193,7 @@ def start_llm_span(
     *,
     provider: str | None = None,
     model: str | None = None,
-):
+) -> Iterator[OTelSpanContext]:
     """Start a span for a single LLM call (child of a pattern span)."""
     attrs: dict[str, Any] = {"vstack.span_type": "llm_call"}
     if provider:

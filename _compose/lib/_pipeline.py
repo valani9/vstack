@@ -29,9 +29,9 @@ class PipelineResult:
 
     pipeline_name: str
     steps_run: list[str]
-    findings: list[dict] = field(default_factory=list)
+    findings: list[dict[str, Any]] = field(default_factory=list)
     per_pattern: dict[str, Any] = field(default_factory=dict)
-    errors: list[dict] = field(default_factory=list)
+    errors: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
     stopped_early: bool = False
 
@@ -47,12 +47,12 @@ class PipelineResult:
     def has_high(self) -> bool:
         return self.dimension_summary()["high"] > 0
 
-    def top_findings(self, n: int = 5) -> list[dict]:
+    def top_findings(self, n: int = 5) -> list[dict[str, Any]]:
         order = {"high": 0, "medium": 1, "low": 2}
 
-        def key(f):
-            sev = f.get("severity") if isinstance(f, dict) else getattr(f, "severity", "low")
-            return order.get(sev, 99)
+        def key(f: dict[str, Any]) -> int:
+            sev = f.get("severity")
+            return order.get(sev, 99) if isinstance(sev, str) else 99
 
         return sorted(self.findings, key=key)[:n]
 
@@ -252,7 +252,7 @@ class Pipeline:
                     diag_out = self._run_diagnose(
                         trace,
                         llm_client,
-                        recipe=step.pattern,  # type: ignore[arg-type]
+                        recipe=step.pattern,
                         mode=step.mode,
                     )
                     result.steps_run.append(step.label or "diagnose")

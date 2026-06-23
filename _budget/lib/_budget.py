@@ -9,7 +9,10 @@ from __future__ import annotations
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
+
+# Each recorded event: (timestamp_seconds, tokens, cost_usd).
+BudgetEvent = tuple[float, int, float]
 
 
 class BudgetExceeded(Exception):
@@ -44,7 +47,7 @@ class BudgetWindow:
     kind: WindowKind
     """``minute`` / ``hour`` / ``day``."""
 
-    events: deque = field(default_factory=deque)
+    events: deque[BudgetEvent] = field(default_factory=deque)
     """Each event: (timestamp_seconds, tokens, cost_usd)."""
 
     @property
@@ -333,7 +336,7 @@ class BudgetReport:
         """True if any utilization exceeds the threshold (e.g. 0.9 = 90%)."""
         return any((u is not None and u >= threshold) for u in self.utilization().values())
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "current": {
                 "cost_per_minute": self.cost_per_minute,

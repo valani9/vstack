@@ -180,7 +180,7 @@ class ScoreCard:
             self.dimensions.values(),
             key=lambda d: d.score,
         )
-        result = []
+        result: list[tuple[str, str]] = []
         for dim in sorted_dims:
             if dim.top_intervention:
                 result.append((dim.name, dim.top_intervention))
@@ -256,35 +256,47 @@ def _get_findings(report: Any) -> list[Any]:
 
 
 def _get_pattern_name(finding: Any) -> str | None:
+    value: object
     if hasattr(finding, "pattern"):
-        return getattr(finding, "pattern")
-    if isinstance(finding, dict):
-        return finding.get("pattern")
-    return None
+        value = finding.pattern
+    elif isinstance(finding, dict):
+        value = finding.get("pattern")
+    else:
+        return None
+    return value if isinstance(value, str) else None
 
 
 def _get_severity(finding: Any) -> str:
+    value: object
     if hasattr(finding, "severity"):
-        return getattr(finding, "severity", "low")
-    if isinstance(finding, dict):
-        return finding.get("severity", "low")
-    return "low"
+        value = getattr(finding, "severity", "low")
+    elif isinstance(finding, dict):
+        value = finding.get("severity", "low")
+    else:
+        return "low"
+    return value if isinstance(value, str) else "low"
 
 
 def _get_title(finding: Any) -> str:
+    value: object
     if hasattr(finding, "title"):
-        return getattr(finding, "title", "")
-    if isinstance(finding, dict):
-        return finding.get("title", "")
-    return ""
+        value = getattr(finding, "title", "")
+    elif isinstance(finding, dict):
+        value = finding.get("title", "")
+    else:
+        return ""
+    return value if isinstance(value, str) else ""
 
 
 def _get_intervention(finding: Any) -> str:
+    value: object
     if hasattr(finding, "intervention"):
-        return getattr(finding, "intervention", "")
-    if isinstance(finding, dict):
-        return finding.get("intervention", "")
-    return ""
+        value = getattr(finding, "intervention", "")
+    elif isinstance(finding, dict):
+        value = finding.get("intervention", "")
+    else:
+        return ""
+    return value if isinstance(value, str) else ""
 
 
 def compute_scorecard(

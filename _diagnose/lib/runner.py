@@ -38,7 +38,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Sequence
 
-from .adapters import Finding, extract_findings
+from .adapters import Finding as Finding
+from .adapters import extract_findings
 from .registry import (
     ALL_SHAPES,
     PATTERNS,
@@ -362,7 +363,7 @@ def diagnose(
         from .cache import CachingLLMClient
 
         cache_wrapper = CachingLLMClient(inner=llm_client)
-        effective_client = cache_wrapper
+        effective_client: Any | None = cache_wrapper
     else:
         effective_client = llm_client
 
@@ -381,7 +382,7 @@ def diagnose(
             # Some analyzers want llm_client positional; we always pass
             # it as a kwarg and rely on the constructor to map it.
             ctor_kwargs.update(overrides.get(info.name, {}))
-            if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
+            if "mode" in cls.__init__.__code__.co_varnames:
                 ctor_kwargs.setdefault("mode", mode)
             import time
 
@@ -449,7 +450,7 @@ async def diagnose_async(
         from .cache import CachingLLMClient
 
         cache_wrapper = CachingLLMClient(inner=llm_client)
-        effective_client = cache_wrapper
+        effective_client: Any | None = cache_wrapper
     else:
         effective_client = llm_client
 
@@ -467,7 +468,7 @@ async def diagnose_async(
                 if effective_client is not None:
                     ctor_kwargs["llm_client"] = effective_client
                 ctor_kwargs.update(overrides.get(info.name, {}))
-                if "mode" in cls.__init__.__code__.co_varnames:  # type: ignore[attr-defined]
+                if "mode" in cls.__init__.__code__.co_varnames:
                     ctor_kwargs.setdefault("mode", mode)
                 import time
 
@@ -535,7 +536,7 @@ def _install_telemetry_sink() -> tuple[Any, Callable[[], None]]:
     case, the cost summary just stays empty.
     """
     try:
-        from vstack.aar import (  # type: ignore[attr-defined]
+        from vstack.aar import (
             InMemoryTelemetrySink,
             get_default_sink,
             set_default_sink,

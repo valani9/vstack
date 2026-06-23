@@ -22,7 +22,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, cast
 
 from .render import DashboardConfig, render_report
 
@@ -96,7 +96,8 @@ def main(argv: list[str] | None = None) -> int:
     p_serve.set_defaults(func=_cmd_serve)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    func = cast(Callable[[argparse.Namespace], int], args.func)
+    return func(args)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._exporter import is_enabled, start_llm_span
+from ._exporter import OTelSpanContext, is_enabled, start_llm_span
 
 
 class OTelInstrumentedClient:
@@ -45,7 +45,7 @@ class OTelInstrumentedClient:
         self._provider = provider
         self._model = model
 
-    def chat(self, messages: list[dict], **kwargs: Any) -> Any:
+    def chat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         if not is_enabled():
             return self._client.chat(messages, **kwargs)
 
@@ -54,7 +54,7 @@ class OTelInstrumentedClient:
             self._set_response_attrs(span, result)
             return result
 
-    async def achat(self, messages: list[dict], **kwargs: Any) -> Any:
+    async def achat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         if not is_enabled():
             if hasattr(self._client, "achat"):
                 return await self._client.achat(messages, **kwargs)
@@ -69,7 +69,7 @@ class OTelInstrumentedClient:
             return result
 
     @staticmethod
-    def _set_response_attrs(span, result: Any) -> None:
+    def _set_response_attrs(span: OTelSpanContext, result: Any) -> None:
         tokens_in = getattr(result, "tokens_in", 0)
         tokens_out = getattr(result, "tokens_out", 0)
         cost_usd = getattr(result, "cost_usd", 0.0)

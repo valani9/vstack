@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 VALID_SHAPES = {"individual", "team", "org"}
@@ -112,7 +112,7 @@ def parse_recipe_yaml(yaml_text: str) -> dict[str, Any]:
     try:
         import yaml
 
-        return yaml.safe_load(yaml_text)
+        return cast("dict[str, Any]", yaml.safe_load(yaml_text))
     except ImportError:
         return _parse_minimal_yaml(yaml_text)
 

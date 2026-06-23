@@ -130,8 +130,10 @@ def _get_timestamp(finding: Any) -> float:
 
 def _get_severity(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("severity", "low")
-    return getattr(finding, "severity", "low")
+        sev = finding.get("severity", "low")
+    else:
+        sev = getattr(finding, "severity", "low")
+    return str(sev)
 
 
 def _floor_to_bucket(ts: float, granularity: BucketGranularity) -> float:

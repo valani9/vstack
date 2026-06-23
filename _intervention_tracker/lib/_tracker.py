@@ -102,7 +102,7 @@ class OutcomeStats:
 class InterventionTracker:
     """In-memory tracker. Persist via to_dict / from_dict to JSON."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._interventions: dict[str, Intervention] = {}
         self._counter: int = 0
 

@@ -7,7 +7,7 @@ import statistics
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 
 @dataclass
@@ -309,8 +309,9 @@ def _get_findings(report: Any) -> list[Any]:
 
 def _get_severity(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("severity", "low")
-    return getattr(finding, "severity", "low")
+        # Untyped report dict (JSON-parsed); severity is always a label string.
+        return cast(str, finding.get("severity", "low"))
+    return cast(str, getattr(finding, "severity", "low"))
 
 
 @dataclass

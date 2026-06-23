@@ -10,6 +10,14 @@ from typing import Any
 from ._compute import DimensionName, ScoreCard
 from ._grade import Grade, score_to_grade, trend_arrow
 
+DIMENSION_ORDER: tuple[DimensionName, ...] = (
+    "reasoning",
+    "coordination",
+    "trust",
+    "workload",
+    "culture",
+)
+
 
 @dataclass
 class DimensionDelta:
@@ -152,15 +160,15 @@ class ScoreCardComparison:
         lines.append("")
         lines.append("| Dimension     | Before | After  | Delta   | Trend |")
         lines.append("|---------------|--------|--------|---------|-------|")
-        for name in ("reasoning", "coordination", "trust", "workload", "culture"):
-            d = self.dimension_deltas.get(name)
-            if d is None:
+        for name in DIMENSION_ORDER:
+            delta = self.dimension_deltas.get(name)
+            if delta is None:
                 continue
             lines.append(
                 f"| {name:13s} | "
-                f"{d.grade_before.letter:6s} | "
-                f"{d.grade_after.letter:6s} | "
-                f"{d.delta:+6.1f}  | {d.trend}     |"
+                f"{delta.grade_before.letter:6s} | "
+                f"{delta.grade_after.letter:6s} | "
+                f"{delta.delta:+6.1f}  | {delta.trend}     |"
             )
         return "\n".join(lines)
 
@@ -168,7 +176,7 @@ class ScoreCardComparison:
 def compare_scorecards(before: ScoreCard, after: ScoreCard) -> ScoreCardComparison:
     """Compute the delta between two scorecards."""
     dimension_deltas: dict[DimensionName, DimensionDelta] = {}
-    for name in ("reasoning", "coordination", "trust", "workload", "culture"):
+    for name in DIMENSION_ORDER:
         b = before.get_dimension(name)
         a = after.get_dimension(name)
         if b is None or a is None:

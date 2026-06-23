@@ -64,7 +64,7 @@ class ActionEscalate(Action):
 class ActionIgnore(Action):
     """Explicitly ignore the finding."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(kind="ignore")
 
 
@@ -74,7 +74,7 @@ class ActionCustom(Action):
 
     payload: dict[str, Any] = field(default_factory=dict)
 
-    def __init__(self, **payload):
+    def __init__(self, **payload: Any) -> None:
         super().__init__(kind="custom")
         self.payload = payload
 

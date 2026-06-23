@@ -33,7 +33,7 @@ module and uses it in place of the old ``_coerce_findings``.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Callable
+from typing import Any, Callable, TypeGuard
 
 from .registry import SEVERITY_ORDER, severity_rank
 
@@ -442,7 +442,7 @@ def _first_intervention_string(item: Any) -> str:
 # --- iterable detection ----------------------------------------------
 
 
-def _is_iterable_of_records(value: Any) -> bool:
+def _is_iterable_of_records(value: Any) -> TypeGuard[Iterable[Any]]:
     """Return True iff ``value`` is a non-empty iterable of record-like
     items (dicts, dataclasses, pydantic models, SimpleNamespaces, or
     Finding instances). Strings and bytes do not count.

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 MarkerKind = Literal["cost", "latency", "quality", "safety", "custom"]
 
@@ -94,14 +94,15 @@ def _has_markers_attribute(step: Any) -> bool:
 
 def _get_markers_list(step: Any) -> list[Marker]:
     if isinstance(step, dict):
-        return step.setdefault(_MARKERS_ATTR, [])
+        existing = step.setdefault(_MARKERS_ATTR, [])
+        return cast("list[Marker]", existing)
     try:
-        return getattr(step, _MARKERS_ATTR)
+        return cast("list[Marker]", getattr(step, _MARKERS_ATTR))
     except AttributeError:
         # Attempt to set; if frozen pydantic, will raise.
         try:
             setattr(step, _MARKERS_ATTR, [])
-            return getattr(step, _MARKERS_ATTR)
+            return cast("list[Marker]", getattr(step, _MARKERS_ATTR))
         except Exception:
             return []
 

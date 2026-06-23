@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-def _hash_request(messages: list[dict], **kwargs: Any) -> str:
+def _hash_request(messages: list[dict[str, Any]], **kwargs: Any) -> str:
     """Canonical request hash for cache lookups."""
     body = json.dumps(
         {
@@ -93,7 +93,7 @@ class LLMCache:
     def _now(self) -> float:
         return time.time()
 
-    def get(self, messages: list[dict], **kwargs: Any) -> Any | None:
+    def get(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any | None:
         """Look up a cached response. Returns None on miss/expired."""
         h = _hash_request(messages, **kwargs)
         key = self._key(h)
@@ -115,7 +115,7 @@ class LLMCache:
 
     def put(
         self,
-        messages: list[dict],
+        messages: list[dict[str, Any]],
         response: Any,
         **kwargs: Any,
     ) -> None:
@@ -143,7 +143,7 @@ class LLMCache:
         """Return a cache-wrapped LLM client."""
         return _CachedClient(client=client, cache=self)
 
-    def invalidate(self, messages: list[dict], **kwargs: Any) -> bool:
+    def invalidate(self, messages: list[dict[str, Any]], **kwargs: Any) -> bool:
         """Invalidate a single entry. Returns True if found."""
         h = _hash_request(messages, **kwargs)
         key = self._key(h)
@@ -170,7 +170,7 @@ class _CachedClient:
         self._client = client
         self._cache = cache
 
-    def chat(self, messages: list[dict], **kwargs: Any) -> Any:
+    def chat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         cached = self._cache.get(messages, **kwargs)
         if cached is not None:
             self._cache.stats.hits += 1
@@ -185,7 +185,7 @@ class _CachedClient:
         self._cache.put(messages, result, **kwargs)
         return result
 
-    async def achat(self, messages: list[dict], **kwargs: Any) -> Any:
+    async def achat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         cached = self._cache.get(messages, **kwargs)
         if cached is not None:
             self._cache.stats.hits += 1

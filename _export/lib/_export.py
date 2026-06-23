@@ -123,7 +123,7 @@ def export_jira(report: Any) -> dict[str, Any]:
     payload (REST API v3).
     """
     findings = _get_findings(report)
-    content: list[dict] = []
+    content: list[dict[str, Any]] = []
 
     content.append(
         {

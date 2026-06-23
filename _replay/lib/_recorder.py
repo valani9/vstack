@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from types import TracebackType
 from typing import Any
 
 from ._replay import ReplayEntry, hash_request
@@ -50,7 +51,7 @@ class ReplayRecorder:
     def record(
         self,
         *,
-        messages: list[dict],
+        messages: list[dict[str, Any]],
         kwargs: dict[str, Any],
         response: Any,
     ) -> None:
@@ -78,10 +79,15 @@ class ReplayRecorder:
             self._file.flush()
             self._file.close()
 
-    def __enter__(self):
+    def __enter__(self) -> ReplayRecorder:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.close()
 
 
@@ -106,12 +112,12 @@ class _RecordingClient:
         self._client = client
         self._recorder = recorder
 
-    def chat(self, messages: list[dict], **kwargs: Any) -> Any:
+    def chat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         result = self._client.chat(messages, **kwargs)
         self._recorder.record(messages=messages, kwargs=kwargs, response=result)
         return result
 
-    async def achat(self, messages: list[dict], **kwargs: Any) -> Any:
+    async def achat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         if hasattr(self._client, "achat"):
             result = await self._client.achat(messages, **kwargs)
         else:

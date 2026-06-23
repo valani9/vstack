@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextvars
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -74,10 +75,10 @@ class _BudgetEnforcedClient:
         self._client = client
         self._enforcer = enforcer
 
-    def chat(self, messages, **kwargs):
+    def chat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         # Estimate prompt token size.
         prompt_tokens = _estimate_prompt_tokens(messages)
-        max_response_tokens = kwargs.get("max_tokens", 4096)
+        max_response_tokens: int = kwargs.get("max_tokens", 4096)
 
         projected_cost = self._enforcer.projected_cost(
             prompt_tokens=prompt_tokens,
@@ -103,9 +104,9 @@ class _BudgetEnforcedClient:
 
         return result
 
-    async def achat(self, messages, **kwargs):
+    async def achat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         prompt_tokens = _estimate_prompt_tokens(messages)
-        max_response_tokens = kwargs.get("max_tokens", 4096)
+        max_response_tokens: int = kwargs.get("max_tokens", 4096)
 
         projected_cost = self._enforcer.projected_cost(
             prompt_tokens=prompt_tokens,
@@ -132,12 +133,12 @@ class _BudgetEnforcedClient:
 
         return result
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Forward any other attribute access to the wrapped client."""
         return getattr(self._client, name)
 
 
-def _estimate_prompt_tokens(messages) -> int:
+def _estimate_prompt_tokens(messages: list[dict[str, Any]]) -> int:
     """Rough token estimate: 1 token per 4 characters."""
     if not messages:
         return 0
@@ -154,7 +155,7 @@ class BudgetRegistry:
     set the active client for nested LLM calls.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._budgets: dict[str, Budget] = {}
 
     def register(self, client_id: str, budget: Budget) -> None:
@@ -167,7 +168,7 @@ class BudgetRegistry:
         return self._budgets.get(client_id)
 
     @contextmanager
-    def context(self, client_id: str):
+    def context(self, client_id: str) -> Iterator[Budget | None]:
         token = _active_client.set(client_id)
         try:
             yield self._budgets.get(client_id)
@@ -192,7 +193,7 @@ class _MultiBudgetClient:
         self._client = client
         self._registry = registry
 
-    def chat(self, messages, **kwargs):
+    def chat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         budget = self._registry.active_budget()
         if budget is None:
             return self._client.chat(messages, **kwargs)
@@ -201,7 +202,7 @@ class _MultiBudgetClient:
         wrapped = enforcer.wrap(self._client)
         return wrapped.chat(messages, **kwargs)
 
-    async def achat(self, messages, **kwargs):
+    async def achat(self, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
         budget = self._registry.active_budget()
         if budget is None:
             if hasattr(self._client, "achat"):
@@ -212,5 +213,5 @@ class _MultiBudgetClient:
         wrapped = enforcer.wrap(self._client)
         return await wrapped.achat(messages, **kwargs)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._client, name)

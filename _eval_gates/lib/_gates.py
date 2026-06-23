@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Protocol, cast
 
 
 def _get_findings(report: Any) -> list[Any]:
@@ -16,8 +16,8 @@ def _get_findings(report: Any) -> list[Any]:
 
 def _get_severity(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("severity", "low")
-    return getattr(finding, "severity", "low")
+        return cast(str, finding.get("severity", "low"))
+    return cast(str, getattr(finding, "severity", "low"))
 
 
 def _get_attr(obj: Any, field: str, default: Any = None) -> Any:
@@ -88,7 +88,7 @@ class SeverityCountGate:
     def name(self) -> str:
         return self._name or f"severity_count[{self.severity}]<={self.max_count}"
 
-    def check(self, *, report: Any = None, **_kwargs) -> GateFailure | None:
+    def check(self, *, report: Any = None, **_kwargs: Any) -> GateFailure | None:
         if report is None:
             return None
         findings = _get_findings(report)
@@ -114,7 +114,7 @@ class F1Gate:
     def name(self) -> str:
         return self._name or f"f1>={self.min_f1}"
 
-    def check(self, *, eval_metrics: Any = None, **_kwargs) -> GateFailure | None:
+    def check(self, *, eval_metrics: Any = None, **_kwargs: Any) -> GateFailure | None:
         if eval_metrics is None:
             return None
         f1 = _get_attr(eval_metrics, "f1", 0.0)
@@ -137,7 +137,7 @@ class PrecisionGate:
     def name(self) -> str:
         return self._name or f"precision>={self.min_precision}"
 
-    def check(self, *, eval_metrics: Any = None, **_kwargs) -> GateFailure | None:
+    def check(self, *, eval_metrics: Any = None, **_kwargs: Any) -> GateFailure | None:
         if eval_metrics is None:
             return None
         precision = _get_attr(eval_metrics, "precision", 0.0)
@@ -160,7 +160,7 @@ class RecallGate:
     def name(self) -> str:
         return self._name or f"recall>={self.min_recall}"
 
-    def check(self, *, eval_metrics: Any = None, **_kwargs) -> GateFailure | None:
+    def check(self, *, eval_metrics: Any = None, **_kwargs: Any) -> GateFailure | None:
         if eval_metrics is None:
             return None
         recall = _get_attr(eval_metrics, "recall", 0.0)
@@ -196,7 +196,7 @@ class BaselineComparisonGate:
         *,
         report: Any = None,
         baseline: Any = None,
-        **_kwargs,
+        **_kwargs: Any,
     ) -> GateFailure | None:
         if report is None or baseline is None:
             return None
@@ -243,7 +243,7 @@ class CustomGate:
     def name(self) -> str:
         return self.name_
 
-    def check(self, **kwargs) -> GateFailure | None:
+    def check(self, **kwargs: Any) -> GateFailure | None:
         return self.predicate(**kwargs)
 
 

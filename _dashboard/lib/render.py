@@ -341,7 +341,9 @@ def _hero(
 </section>"""
 
 
-def _stats_strip(findings: list[Any], per_pattern: list[Any], errors: dict, cost: Any) -> str:
+def _stats_strip(
+    findings: list[Any], per_pattern: list[Any], errors: dict[str, str], cost: Any
+) -> str:
     sev_counts = _bucket_by_severity(findings)
     high_or_worse = sev_counts.get("critical", 0) + sev_counts.get("high", 0)
 
@@ -510,7 +512,7 @@ def _cost_panel(cost: Any) -> str:
     return _chart_panel("Cost by pattern", "cost-chart", cfg)
 
 
-def _per_pattern_table_panel(per_pattern: list[Any], errors: dict) -> str:
+def _per_pattern_table_panel(per_pattern: list[Any], errors: dict[str, str]) -> str:
     rows = []
     for pr in per_pattern:
         name = _read(pr, "pattern", "?")
@@ -602,7 +604,7 @@ def _evidence_block(evidence: str, intervention: str) -> str:
     return "".join(bits)
 
 
-def _errors_panel(errors: dict) -> str:
+def _errors_panel(errors: dict[str, str]) -> str:
     rows = []
     for pat, msg in errors.items():
         rows.append(
@@ -621,7 +623,7 @@ def _errors_panel(errors: dict) -> str:
 </section>"""
 
 
-def _chart_panel(title: str, canvas_id: str, chart_config: dict) -> str:
+def _chart_panel(title: str, canvas_id: str, chart_config: dict[str, Any]) -> str:
     config_json = json.dumps(chart_config)
     return f"""<section class="panel">
   <div class="flex items-center justify-between mb-4">

@@ -140,12 +140,9 @@ jobs:
         # pattern's lib separately avoids that and gives clearer per-pattern
         # output. New patterns add another line here.
         #
-        # Feature modules are added here once they pass mypy --strict.
-        # Still pending type-annotation cleanup (NOT yet in this list):
-        # _diagnose _dashboard _scorecard _budget _trace_zoo _replay
-        # _vcache _otel _compose _vdiff _vbench _markers _synth _veval
-        # _recipes_dsl _heatmap _policy _budgeter _tracer _export
-        # _findings_db _timeline _eval_gates _intervention_tracker.
+        # As of v0.38.0 ALL 36 feature modules pass mypy --strict and are
+        # listed below — keep new modules strict-clean so they can be added
+        # here too.
         run: |
           set -e
           for pattern in \
@@ -176,6 +173,30 @@ jobs:
               _priority_queue \
               _snippet \
               _aggregate \
+              _diagnose \
+              _dashboard \
+              _scorecard \
+              _budget \
+              _trace_zoo \
+              _replay \
+              _vcache \
+              _otel \
+              _compose \
+              _vdiff \
+              _vbench \
+              _markers \
+              _synth \
+              _veval \
+              _recipes_dsl \
+              _heatmap \
+              _policy \
+              _budgeter \
+              _tracer \
+              _export \
+              _findings_db \
+              _timeline \
+              _eval_gates \
+              _intervention_tracker \
               module-2-team/30-aar-generator \
               module-2-team/17-lencioni-diagnostic \
               module-2-team/18-trust-triangle-audit \

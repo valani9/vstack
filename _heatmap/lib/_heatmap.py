@@ -59,14 +59,14 @@ def _get_findings(report: Any) -> list[Any]:
 
 def _get_pattern(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("pattern", "unknown")
-    return getattr(finding, "pattern", "unknown")
+        return str(finding.get("pattern", "unknown"))
+    return str(getattr(finding, "pattern", "unknown"))
 
 
 def _get_severity(finding: Any) -> str:
     if isinstance(finding, dict):
-        return finding.get("severity", "low")
-    return getattr(finding, "severity", "low")
+        return str(finding.get("severity", "low"))
+    return str(getattr(finding, "severity", "low"))
 
 
 # Pattern → dimension mapping (subset of vstack.scorecard mapping).
