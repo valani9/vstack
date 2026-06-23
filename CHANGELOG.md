@@ -6,6 +6,34 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.39.0] — 2026-06-23
+
+Three new shell CLIs that expose previously library-only modules — the
+`Trace → Sanitize → Diagnose → AAR → Apply` cycle is now fully driveable
+from the command line.
+
+### Added
+
+- **`vstack-redaction`** — scrub PII / secrets from a trace at the shell
+  (the cycle's "Sanitize" step). `--trace trace.json [--out scrubbed.json]`
+  scrubs an `AgentTrace` JSON (or stdin), `--text` scrubs raw text,
+  `--list-patterns` prints the built-in `DEFAULT_PATTERNS`; per-pattern
+  match counts go to stderr.
+- **`vstack-export`** — convert a diagnose report / findings JSON to another
+  format: `--format {csv,json,markdown,github,jira}`, output to `--out` or
+  stdout.
+- **`vstack-aggregate`** — roll up multiple diagnose reports:
+  `--reports reports.json [--top N] [--json]` prints top patterns, top
+  agents, and the severity distribution.
+- Each CLI is a thin shell over the existing public module functions (no new
+  business logic), fully typed (`mypy --strict`), ruff-clean, and unit-tested.
+  CLI surface count: 50 → 53.
+
+### Compatibility
+
+- All tests pass; the three modules already shipped in the wheel, so the new
+  CLIs are available to `pip install` users immediately. No breaking changes.
+
 ## [0.38.0] — 2026-06-23
 
 Type-safety completion: every feature module is now `mypy --strict` clean

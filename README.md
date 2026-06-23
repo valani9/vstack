@@ -236,7 +236,7 @@ vstack is a forensic loop, not a collection of tools. Same five-step shape, ever
 | Step | What it does | Surface |
 |---|---|---|
 | **1. Trace** | Capture or import a structured agent run | `vstack.aar.AgentTrace` · `vstack-browser scrape` |
-| **2. Sanitize** | Strip prompt-injection bait + redact secrets | `vstack.security.audit_input_for_injection` |
+| **2. Sanitize** | Strip prompt-injection bait + redact secrets | `vstack.security.audit_input_for_injection` · `vstack-redaction` |
 | **3. Diagnose** | Run the right pattern (or several) against the trace | `vstack-<pattern>` · `vstack-mcp` · `vstack-api` |
 | **4. AAR** | Generate the Wharton 4-step after-action review | `vstack` · `vstack.aar.AARGenerator` |
 | **5. Apply** | Cross-link to other patterns + ship the interventions | The AAR output is the spec |
@@ -305,7 +305,7 @@ vstack ships **12 invocation surfaces**. Same patterns, same data shape, differe
 | # | Surface | Get it with | Use when |
 |---|---|---|---|
 | 1 | **Python imports** | `pip install valanistack` | You're building in Python and want patterns as library calls |
-| 2 | **50 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-dashboard`, `vstack-trace-zoo`, …) | Shell scripts, CI checks, one-shot diagnoses |
+| 2 | **53 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-redaction`, `vstack-export`, `vstack-aggregate`, …) | Shell scripts, CI checks, one-shot diagnoses |
 | 3 | **MCP server** | `pip install "valanistack[mcp]"` · `vstack-mcp serve` | Any MCP-speaking AI client (see table below) |
 | 4 | **REST API (FastAPI)** | `pip install "valanistack[api]"` · `vstack-api serve` | Production multi-tenant deploys; auth + rate-limit baked in |
 | 5 | **Docker** | `docker pull ghcr.io/valani9/vstack:0.37.0` | Kubernetes deploys; multi-arch (amd64 + arm64) |
@@ -329,7 +329,7 @@ Beyond the 34 diagnostic patterns, vstack ships a **library layer** for capturin
 | `vstack.synth` | Programmatic synthetic-trace generator |
 | `vstack.trace_zoo` | Library of named synthetic traces (`vstack-trace-zoo`) |
 | `vstack.markers` | Structured markers on trace steps |
-| `vstack.redaction` | PII / secret scrubbing before diagnosis |
+| `vstack.redaction` | PII / secret scrubbing before diagnosis (`vstack-redaction`) |
 
 **Diagnose & compose**
 
@@ -347,8 +347,8 @@ Beyond the 34 diagnostic patterns, vstack ships a **library layer** for capturin
 | Module | What it does |
 |---|---|
 | `vstack.findings_db` | SQLite-backed finding store |
-| `vstack.export` | Export findings to CSV / JSON / Markdown |
-| `vstack.aggregate` | Cross-report aggregation + co-occurrence matrix |
+| `vstack.export` | Export findings to CSV / JSON / Markdown / GitHub / Jira (`vstack-export`) |
+| `vstack.aggregate` | Cross-report aggregation + co-occurrence matrix (`vstack-aggregate`) |
 | `vstack.scorecard` | Per-agent multi-pattern scorecard (`vstack-scorecard`) |
 | `vstack.dashboard` | Terminal findings dashboard (`vstack-dashboard`) |
 | `vstack.snippet` | Minimal relevant-step trace excerpts |
