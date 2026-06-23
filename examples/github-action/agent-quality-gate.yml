@@ -34,11 +34,21 @@ jobs:
 
       # Full LLM-backed gate (needs a key in repo secrets):
       - name: vstack gate (LLM-backed)
-        uses: valani9/vstack@v0.45.0
+        id: vstack
+        uses: valani9/vstack@v0.48.0
         with:
           trace: traces/latest.json
           client: anthropic
           mode: standard
           fail-on: high
+          sarif: vstack.sarif        # also emit SARIF for code scanning
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # Surface findings in the Security tab + as PR annotations (runs even
+      # if the gate above failed):
+      - name: Upload SARIF
+        if: always() && steps.vstack.outputs.sarif != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.vstack.outputs.sarif }}

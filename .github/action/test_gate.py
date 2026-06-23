@@ -79,3 +79,29 @@ def test_render_summary_passed_no_findings() -> None:
     out = gate.render_summary({"shape": "individual", "errors": []}, [], "high", False, "none")
     assert "PASSED" in out
     assert "No findings" in out
+
+
+def test_sarif_from_report() -> None:
+    report = {
+        "shape": "individual",
+        "findings": [
+            {
+                "pattern": "bias_stack",
+                "severity": "high",
+                "title": "escalation",
+                "evidence": "e",
+                "intervention": "i",
+            },
+            {"pattern": "aar", "severity": "low", "title": "edit before read"},
+        ],
+    }
+    s = gate.sarif_from_report(report, "traces/run.json")
+    assert s["version"] == "2.1.0"
+    results = s["runs"][0]["results"]
+    levels = {(r["ruleId"], r["level"]) for r in results}
+    assert ("vstack/bias_stack", "error") in levels
+    assert ("vstack/aar", "note") in levels
+    assert (
+        results[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        == "traces/run.json"
+    )

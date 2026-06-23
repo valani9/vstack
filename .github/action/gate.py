@@ -108,6 +108,28 @@ def render_summary(
     return "\n".join(lines) + "\n"
 
 
+def sarif_from_report(report: dict[str, Any], trace_uri: str) -> dict[str, Any]:
+    """Render a diagnose report dict as SARIF, reusing vstack's own renderer.
+
+    Reconstructs ``Finding`` objects from the JSON report so the Action and the
+    ``vstack-diagnose --sarif`` CLI emit identical SARIF.
+    """
+    from vstack.diagnose import DiagnoseReport, Finding, to_sarif
+
+    findings = [
+        Finding(
+            pattern=f.get("pattern", "?"),
+            severity=f.get("severity", "none"),
+            title=f.get("title", ""),
+            evidence=f.get("evidence", ""),
+            intervention=f.get("intervention", ""),
+        )
+        for f in (report.get("findings") or [])
+    ]
+    rep = DiagnoseReport(shape=report.get("shape", "individual"), findings=findings)
+    return to_sarif(rep, trace_uri=trace_uri)
+
+
 def _set_output(key: str, value: str) -> None:
     path = os.environ.get("GITHUB_OUTPUT")
     if path:
@@ -152,6 +174,13 @@ def main(env: dict[str, str] | None = None) -> int:
     _set_output("max-severity", max_sev)
     _set_output("findings-count", str(count))
     _set_output("report", report_path)
+
+    sarif_path = (env.get("VSTACK_SARIF") or "").strip()
+    if sarif_path:
+        sarif = sarif_from_report(report, env.get("VSTACK_TRACE", "trace.json"))
+        with open(sarif_path, "w", encoding="utf-8") as fh:
+            json.dump(sarif, fh, indent=2)
+        _set_output("sarif", sarif_path)
 
     summary = render_summary(report, findings, fail_on, failed, max_sev)
     _write_summary(summary)

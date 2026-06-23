@@ -6,6 +6,30 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.48.0] — 2026-06-23
+
+SARIF output — vstack findings now flow into GitHub code scanning (Security
+tab + PR annotations).
+
+### Added
+
+- **`vstack-diagnose --sarif`** — emit a SARIF 2.1.0 report instead of
+  Markdown/JSON. Each pattern becomes a SARIF rule; each finding a result
+  whose `level` maps from severity (critical/high → error, medium/moderate →
+  warning, low/trace → note). Results carry the trace path as their
+  artifact location.
+- **`vstack.diagnose.to_sarif(report, *, trace_uri=..., version=...)`** — the
+  public renderer behind the flag.
+- **GitHub Action `sarif` input + output** — set `sarif: vstack.sarif` to also
+  write a SARIF report (single diagnose run) and upload it with
+  `github/codeql-action/upload-sarif`; the example workflow shows the upload.
+  Findings then appear in the Security tab and as inline PR annotations.
+
+### Compatibility
+
+- All tests pass (7 SARIF + 1 Action-SARIF test added). No breaking changes —
+  `--sarif` is opt-in.
+
 ## [0.47.0] — 2026-06-23
 
 Citability + positioning: a JOSS software-paper draft and a "why vstack"

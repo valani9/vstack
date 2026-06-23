@@ -38,6 +38,12 @@ inputs:
     description: "Force trace shape: individual | team | org (default: inferred)."
     required: false
     default: ""
+  sarif:
+    description: >-
+      If set to a path, also write a SARIF 2.1.0 report there (upload it with
+      github/codeql-action/upload-sarif to surface findings in code scanning).
+    required: false
+    default: ""
   version:
     description: "valanistack version to install (e.g. '0.45.0'). Empty = latest."
     required: false
@@ -57,6 +63,9 @@ outputs:
   report:
     description: "Path to the written JSON report."
     value: ${{ steps.gate.outputs.report }}
+  sarif:
+    description: "Path to the written SARIF report (empty unless `sarif` input set)."
+    value: ${{ steps.gate.outputs.sarif }}
 
 runs:
   using: "composite"
@@ -98,4 +107,5 @@ runs:
         VSTACK_RECIPE: ${{ inputs.recipe }}
         VSTACK_CLIENT: ${{ inputs.client }}
         VSTACK_SHAPE: ${{ inputs.shape }}
+        VSTACK_SARIF: ${{ inputs.sarif }}
       run: python "${{ github.action_path }}/.github/action/gate.py"

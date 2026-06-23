@@ -284,6 +284,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Emit a machine-readable JSON report instead of Markdown.",
     )
     parser.add_argument(
+        "--sarif",
+        action="store_true",
+        help=(
+            "Emit a SARIF 2.1.0 report (upload with github/codeql-action/"
+            "upload-sarif to surface findings in GitHub code scanning)."
+        ),
+    )
+    parser.add_argument(
         "--top",
         type=int,
         default=5,
@@ -336,7 +344,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         mode=args.mode,
     )
 
-    if args.json:
+    if args.sarif:
+        from .sarif import to_sarif
+
+        trace_uri = args.trace if (args.trace and args.trace != "-") else "trace.json"
+        json.dump(to_sarif(report, trace_uri=trace_uri), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+    elif args.json:
         json.dump(_serialise_report(report), sys.stdout, indent=2)
         sys.stdout.write("\n")
     else:

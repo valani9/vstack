@@ -59,8 +59,10 @@ from .runner import (
     diagnose,
     diagnose_async,
 )
+from .sarif import to_sarif
 
 __all__ = [
+    "to_sarif",
     "ADAPTERS",
     "PATTERNS",
     "PatternInfo",
