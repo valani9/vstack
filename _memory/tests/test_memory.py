@@ -214,6 +214,50 @@ def test_install_skills_missing_source_returns_2(
     assert "not found" in capsys.readouterr().err
 
 
+def test_resolve_skills_source_prefers_wheel_bundle(tmp_path: Path) -> None:
+    """The force-included ``vstack/_skills`` bundle wins over checkout fallbacks.
+
+    This guards the pip-install path: the wheel ships ``vstack/_skills`` so
+    ``install-skills`` must find it without a repo checkout present.
+    """
+    from vstack.memory.cli import _resolve_skills_source
+
+    wheel_root = tmp_path / "site-packages" / "vstack"
+    wheel_root.mkdir(parents=True)
+    # The bundled location (highest priority).
+    bundled = wheel_root / "_skills"
+    bundled.mkdir()
+    # A lower-priority sibling checkout location that must be ignored.
+    sibling = wheel_root.parent / "_skills"
+    sibling.mkdir()
+
+    resolved = _resolve_skills_source(None, wheel_root=wheel_root)
+    assert resolved == bundled
+
+
+def test_resolve_skills_source_falls_back_to_checkout(tmp_path: Path) -> None:
+    """With no bundled ``vstack/_skills``, the repo-checkout layout resolves."""
+    from vstack.memory.cli import _resolve_skills_source
+
+    wheel_root = tmp_path / "repo" / "_packaging" / "vstack"
+    wheel_root.mkdir(parents=True)
+    checkout = wheel_root.parent.parent / "_skills"  # repo/_skills
+    checkout.mkdir()
+
+    resolved = _resolve_skills_source(None, wheel_root=wheel_root)
+    assert resolved == checkout
+
+
+def test_resolve_skills_source_supplied_wins(tmp_path: Path) -> None:
+    """An explicit ``--source`` path short-circuits auto-resolution."""
+    from vstack.memory.cli import _resolve_skills_source
+
+    explicit = tmp_path / "custom_skills"
+    explicit.mkdir()
+    resolved = _resolve_skills_source(str(explicit), wheel_root=tmp_path / "ignored")
+    assert resolved == explicit.resolve()
+
+
 # ----------------------------------------------------------------------
 # gen-platform subcommand
 # ----------------------------------------------------------------------

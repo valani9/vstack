@@ -74,13 +74,18 @@ That's the whole tour. The next sections go deeper on each surface.
 If you have an agent trace and don't know which pattern to start with, run all the relevant ones at once via `vstack.diagnose`. The runner picks the bundle based on whether the trace is single-agent, multi-agent, or org-scale.
 
 ```python
+from datetime import datetime, timezone
 from vstack.diagnose import diagnose
 from vstack.aar import AgentTrace, TraceStep
 from vstack.aar.clients import AnthropicClient
 
+now = datetime.now(timezone.utc)
 trace = AgentTrace(
     goal="Refactor the auth module to use JWTs",
-    steps=[TraceStep(action="edit", target="auth.py", note="wrote token issuer")],
+    steps=[
+        TraceStep(timestamp=now, type="tool_call", content="edit auth.py — wrote the JWT token issuer"),
+        TraceStep(timestamp=now, type="observation", content="session middleware breaks on every request"),
+    ],
     outcome="Tokens issued but session middleware now breaks on every request",
     success=False,
 )
@@ -95,6 +100,14 @@ for slug, info in PATTERNS.items():
 ```
 
 The report ranks findings by severity across all patterns in the bundle. If one pattern errors, the rest still run; the failure shows up in `report.errors`. Async callers use `diagnose_async()` with the same signature plus a `concurrency=` knob.
+
+Prefer the shell? The same runner is a CLI (defaults to `--client none`, so it never starts a paid LLM call without explicit opt-in):
+
+```bash
+vstack-diagnose --trace trace.json               # infer the shape, run the bundle, print a report
+vstack-recipes                                   # browse named bundles (stuck_in_loop, trust_collapse, …)
+vstack-diagnose --trace trace.json --recipe stuck_in_loop --client anthropic
+```
 
 ## Install
 
@@ -132,7 +145,7 @@ Python 3.11, 3.12, 3.13 tested in CI. Wheels are pure-Python, no compilation ste
 ```bash
 docker run --rm -p 8000:8000 \
   -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-  ghcr.io/valani9/vstack:0.7.0 vstack-api serve --host 0.0.0.0
+  ghcr.io/valani9/vstack:0.37.0 vstack-api serve --host 0.0.0.0
 ```
 
 Multi-arch images (`linux/amd64` + `linux/arm64`) on [GHCR](https://github.com/valani9/vstack/pkgs/container/vstack).
@@ -144,7 +157,7 @@ git clone https://github.com/valani9/vstack.git
 cd vstack
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,all]"
-pytest -q                                # 2,150 tests
+pytest -q                                # 3,131 tests
 ```
 
 > [!NOTE]
@@ -278,8 +291,8 @@ Three modules mirror the standard org-behavior curriculum: **individual** behavi
 
 | # | Pattern | OB anchor | CLI | What it diagnoses |
 |---|---|---|---|---|
-| 31 | **Schein iceberg culture** | Schein 1985 | `vstack-schein` | Artifacts · espoused values · basic assumptions in agent culture |
-| 32 | **Robbins-Judge 7 culture** | Robbins & Judge 2016 | `vstack-robbins` | Seven dimensions of organizational culture applied to agent crews |
+| 31 | **Schein iceberg culture** | Schein 1985 | `vstack-schein-culture` | Artifacts · espoused values · basic assumptions in agent culture |
+| 32 | **Robbins-Judge 7 culture** | Robbins & Judge 2016 | `vstack-robbins-culture` | Seven dimensions of organizational culture applied to agent crews |
 | 33 | **Org-structure matrix** | Galbraith 1995 / Mintzberg 1979 | `vstack-org-structure` | Functional · divisional · matrix structures applied to agent teams |
 | 34 | **Span-of-control** | Graicunas 1933 | `vstack-span-of-control` | Optimal sub-agents per orchestrator (Graicunas / Urwick) |
 
@@ -292,17 +305,84 @@ vstack ships **12 invocation surfaces**. Same patterns, same data shape, differe
 | # | Surface | Get it with | Use when |
 |---|---|---|---|
 | 1 | **Python imports** | `pip install valanistack` | You're building in Python and want patterns as library calls |
-| 2 | **34 per-pattern CLIs** | `vstack-<pattern>` | Shell scripts, CI checks, one-shot diagnoses |
+| 2 | **50 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-dashboard`, `vstack-trace-zoo`, …) | Shell scripts, CI checks, one-shot diagnoses |
 | 3 | **MCP server** | `pip install "valanistack[mcp]"` · `vstack-mcp serve` | Any MCP-speaking AI client (see table below) |
 | 4 | **REST API (FastAPI)** | `pip install "valanistack[api]"` · `vstack-api serve` | Production multi-tenant deploys; auth + rate-limit baked in |
-| 5 | **Docker** | `docker pull ghcr.io/valani9/vstack:0.7.0` | Kubernetes deploys; multi-arch (amd64 + arm64) |
-| 6 | **Claude Code skills** | 7 task-shaped `SKILL.md` files under `_skills/lib/` | Drop into `~/.claude/skills/vstack/` so `/vstack-aar`, `/vstack-audit-crew`, `/vstack-post-incident`, etc. show up in Claude Code |
+| 5 | **Docker** | `docker pull ghcr.io/valani9/vstack:0.37.0` | Kubernetes deploys; multi-arch (amd64 + arm64) |
+| 6 | **Claude Code skills** | `vstack-config install-skills` (ships in the wheel) | Installs the 9 task-shaped skills into `~/.claude/skills/vstack/` so `/vstack`, `/vstack-diagnose`, `/vstack-audit-crew`, `/vstack-post-incident`, etc. show up in Claude Code |
 | 7 | **Framework adapters** | `pip install "valanistack[adapters]"` | LangChain · LangGraph · CrewAI · AutoGen · LlamaIndex · Pydantic AI |
-| 8 | **OpenAI / Anthropic tool JSON** | `vstack.adapters.openai_assistants` · `vstack.adapters.anthropic` | Pure-JSON tool manifests — no library install on the consumer side |
+| 8 | **OpenAI / Anthropic tool JSON** | `vstack.adapters.openai` (`as_openai_tool_schemas` · `as_anthropic_tool_schemas`) | Pure-JSON tool manifests — no library install on the consumer side |
 | 9 | **Open WebUI plugin** | `vstack.adapters.openwebui` | Drop-in tool manifest for Open WebUI |
 | 10 | **Tier B platform generators** | `vstack-config gen-platform <client>` | Aider · Goose · Kiro · OpenClaw · Codex CLI · OpenCode · docker-compose |
 | 11 | **Browser dev tooling** | `pip install "valanistack[browser]"` · `vstack-browser` | LangSmith · Phoenix · Helicone · Langfuse · Arize trace scraping |
 | 12 | **First-run smoke** | `vstack-hello` | 30-second end-to-end demo — proves the install works |
+
+## Feature modules
+
+Beyond the 34 diagnostic patterns, vstack ships a **library layer** for capturing traces, running diagnoses at scale, storing/reporting findings, and operating the whole loop in production. Every module imports as `vstack.<name>`, is typed under `mypy --strict`, and is covered by the test suite. These compose with the `Trace → Sanitize → Diagnose → AAR → Apply` cycle above.
+
+**Capture & prep traces**
+
+| Module | What it does |
+|---|---|
+| `vstack.tracer` | Inline trace recorder for live agents |
+| `vstack.synth` | Programmatic synthetic-trace generator |
+| `vstack.trace_zoo` | Library of named synthetic traces (`vstack-trace-zoo`) |
+| `vstack.markers` | Structured markers on trace steps |
+| `vstack.redaction` | PII / secret scrubbing before diagnosis |
+
+**Diagnose & compose**
+
+| Module | What it does |
+|---|---|
+| `vstack.diagnose` | One-call multi-pattern runner (`vstack-diagnose`) |
+| `vstack.recipes_dsl` | YAML/JSON DSL for custom pattern bundles (`vstack-recipes`) |
+| `vstack.compose` | Declarative pattern-pipeline composition |
+| `vstack.policy` | Declarative finding→action policies |
+| `vstack.findings_router` | Route findings to handlers by rule |
+| `vstack.priority_queue` | Severity + aging finding queue (no low-sev starvation) |
+
+**Store, report & compare**
+
+| Module | What it does |
+|---|---|
+| `vstack.findings_db` | SQLite-backed finding store |
+| `vstack.export` | Export findings to CSV / JSON / Markdown |
+| `vstack.aggregate` | Cross-report aggregation + co-occurrence matrix |
+| `vstack.scorecard` | Per-agent multi-pattern scorecard (`vstack-scorecard`) |
+| `vstack.dashboard` | Terminal findings dashboard (`vstack-dashboard`) |
+| `vstack.snippet` | Minimal relevant-step trace excerpts |
+| `vstack.timeline` | Chronological ASCII event timeline |
+| `vstack.heatmap` | ASCII + HTML severity heatmaps |
+| `vstack.trace_diff` | Structural diff of two `AgentTrace`s |
+| `vstack.vdiff` | Structured diff of two `DiagnoseReport`s |
+
+**Cost & caching**
+
+| Module | What it does |
+|---|---|
+| `vstack.budget` | Cost-budget enforcement middleware |
+| `vstack.budgeter` | Cost projection + multi-tier budgets |
+| `vstack.cost_sim` | What-if cost scenarios |
+| `vstack.vcache` | LLM response cache (TTL + LRU) |
+
+**Operate, evaluate & sign**
+
+| Module | What it does |
+|---|---|
+| `vstack.health` | Composite health checks (HEALTHY / DEGRADED / UNHEALTHY) |
+| `vstack.alerting` | Multi-channel alert dispatch |
+| `vstack.eval_gates` | CI gate primitives (fail the build on regressions) |
+| `vstack.veval` | Pattern-vs-ground-truth evaluation harness |
+| `vstack.vbench` | In-process pattern benchmark harness |
+| `vstack.calibrate` | Confidence calibration curves |
+| `vstack.intervention_tracker` | Track applied interventions + their outcomes |
+| `vstack.signing` | HMAC integrity signing for reports |
+| `vstack.otel` | OpenTelemetry span exporter |
+| `vstack.streaming` | SSE event stream for live diagnosis |
+| `vstack.replay` | Replay historical `diagnose()` runs |
+
+Thirty-six library modules, **3,131 tests**, `ruff` + `mypy --strict` clean. Full per-module API docs live on the [hosted docs site](https://valani9.github.io/vstack/) and in [CHANGELOG.md](CHANGELOG.md).
 
 ## Connect to your AI client (MCP)
 
@@ -311,7 +391,7 @@ Most AI clients today speak the **Model Context Protocol**. One command exposes 
 ```bash
 pip install "valanistack[mcp]"
 vstack-mcp serve                    # speaks stdio MCP
-vstack-mcp resources                # list canonical MCP resource URIs
+vstack-mcp list-resources           # list canonical MCP resource URIs
 vstack-mcp config-snippet claude-desktop
 ```
 
@@ -446,11 +526,10 @@ from vstack.adapters.llamaindex import as_llamaindex_tools
 from vstack.adapters.pydantic_ai import as_pydantic_ai_tools
 ```
 
-OpenAI Assistants and Anthropic Messages tool JSON ship without any framework install:
+OpenAI Assistants and Anthropic Messages tool JSON ship without any framework install (both live in `vstack.adapters.openai`):
 
 ```python
-from vstack.adapters.openai_assistants import as_openai_tool_specs
-from vstack.adapters.anthropic import as_anthropic_tool_specs
+from vstack.adapters.openai import as_openai_tool_schemas, as_anthropic_tool_schemas
 ```
 
 ## ~/.vstack/ — persistent state
@@ -460,7 +539,7 @@ vstack writes a small home under `~/.vstack/`:
 | Path | Purpose | CLI |
 |---|---|---|
 | `~/.vstack/config.json` | User preferences (default model, log level, cache size, …) | `vstack-config list` · `vstack-config get` · `vstack-config set` |
-| `~/.vstack/learnings.jsonl` | Cross-session outcome aggregation — what worked, what didn't | `vstack-learn recall` · `vstack-learn update-outcome` |
+| `~/.vstack/learnings.jsonl` | Cross-session outcome aggregation — what worked, what didn't | `vstack-learn recall` · `vstack-learn outcome` |
 | `~/.vstack/analytics/` | Per-session LLM call telemetry (model · tokens · cost · latency) | `vstack-analytics summary` |
 | `~/.vstack/baselines/` | Canonical baselines for benchmark comparison | `vstack-bench compare` |
 | `~/.vstack/cache/` | Optional cache backend (off by default) | `VSTACK_CACHE=memory` |
@@ -473,9 +552,10 @@ All file-store writes are **atomic** (tempfile + `os.replace`) and **lock-protec
 
 ```bash
 pip install "valanistack[browser]"     # gbrain MCP client is bundled
+vstack-gbrain status                       # is gbrain configured on this machine?
 vstack-gbrain search "edit before read failures"
-vstack-gbrain code-def AARGenerator
-vstack-gbrain code-refs sanitize_for_prompt
+vstack-gbrain sync                         # push ~/.vstack/learnings into gbrain
+vstack-gbrain corpus                       # show what vstack has stored
 ```
 
 When gbrain is configured on the same machine, vstack:
@@ -511,12 +591,19 @@ Every env var vstack reads:
 | `VSTACK_API_KEYS_FILE` | Path to a file of `name=key` lines | unset |
 | `VSTACK_API_REQUIRE_AUTH` | Require API key on every REST request | `false` |
 | `VSTACK_API_RATE_LIMIT` | Sliding-window rate limit, e.g. `100/60` (req/sec) | unset → no limit |
-| `VSTACK_API_MAX_BODY` | Max REST request body size | `5242880` (5 MiB) |
-| `VSTACK_API_TIMEOUT_S` | Per-request timeout | `120` |
+| `VSTACK_API_CORS_ORIGINS` | Comma-separated allowed CORS origins | unset → none |
+| `VSTACK_API_MAX_BODY_BYTES` | Max REST request body size | `5242880` (5 MiB) |
+| `VSTACK_API_REQUEST_TIMEOUT` | Per-request timeout, seconds | `120.0` |
 | `VSTACK_CACHE` | Cache backend (`memory` · `off`) | `off` |
-| `VSTACK_LOG_LEVEL` | Log level | `INFO` |
+| `VSTACK_CACHE_CAPACITY` | In-memory cache capacity (entries) | `1024` |
+| `VSTACK_CACHE_TTL_SECONDS` | Optional cache entry TTL | unset → no expiry |
+| `VSTACK_MCP_LLM` | MCP server LLM preference (`anthropic`·`openai`·`ollama`·`stub`) | unset → auto-detect |
+| `VSTACK_MCP_LOG_LEVEL` | MCP server log level | `WARNING` |
 | `VSTACK_HOME` | Override `~/.vstack/` location | `~/.vstack` |
-| `VSTACK_SENTRY_DSN` | Optional Sentry shim DSN | unset |
+| `SENTRY_DSN` | Optional Sentry shim DSN (REST API) | unset → Sentry off |
+| `SENTRY_ENVIRONMENT` | Sentry environment tag | `production` |
+
+> The general CLI log level is a **config key**, not an env var: `vstack-config set log_level INFO` (default `WARNING`). The REST API also reads body sub-limits (`VSTACK_API_MAX_TRACE_STEPS`, `VSTACK_API_MAX_MESSAGES`, `VSTACK_API_MAX_STRING_CHARS`, `VSTACK_API_MAX_TOTAL_CHARS`).
 
 Full reference: [docs/reference/config-keys.md](docs/reference/config-keys.md).
 
@@ -528,7 +615,7 @@ What does happen locally:
 
 - `vstack-analytics` reads `~/.vstack/analytics/*.jsonl` (your own LLM-call logs) and prints a local dashboard. The data never leaves your machine.
 - `vstack-learn` stores cross-session outcomes in `~/.vstack/learnings.jsonl`. Local-only by default.
-- If you enable the optional **Sentry shim** via `VSTACK_SENTRY_DSN`, vstack sends your Sentry server (not ours) crash reports for the REST API. Off by default.
+- If you enable the optional **Sentry shim** via `SENTRY_DSN` (and have `sentry-sdk` installed), vstack sends your Sentry server (not ours) crash reports for the REST API. Off by default.
 - If you enable the **Prometheus `/metrics` endpoint** on the REST API, your own Prometheus scrapes it. We don't ingest anything.
 
 The full security and privacy stance is in [docs/operations/security.md](docs/operations/security.md).
@@ -553,7 +640,7 @@ Filed a bug that isn't here? Open an issue with the [bug-report template](.githu
 
 | Doc | What it covers |
 |---|---|
-| [**Hosted docs site**](https://valani9.github.io/vstack/) | Mkdocs-material, 18 pages, every surface + every concept |
+| [**Hosted docs site**](https://valani9.github.io/vstack/) | Mkdocs-material — every surface, concept, and reference page |
 | [PATTERNS.md](PATTERNS.md) | Full index of all 34 patterns + literature anchors |
 | [Quickstart](docs/quickstart.md) | 5-minute tutorial |
 | [Concepts → 5-layer pattern shape](docs/concepts/pattern-shape.md) | How a vstack pattern is structured |
@@ -594,10 +681,10 @@ rm -f ~/.zsh/completions/_vstack
 rm -f ~/.config/fish/completions/vstack.fish
 
 # 4. Stop the Docker image (if running)
-docker rm -f $(docker ps -aq --filter ancestor=ghcr.io/valani9/vstack:0.7.0) 2>/dev/null
+docker rm -f $(docker ps -aq --filter ancestor=ghcr.io/valani9/vstack:0.37.0) 2>/dev/null
 
 # 5. Remove the Docker image (if pulled)
-docker rmi ghcr.io/valani9/vstack:0.7.0 2>/dev/null
+docker rmi ghcr.io/valani9/vstack:0.37.0 2>/dev/null
 ```
 
 That's it. No system-level installers, no daemons, no LaunchAgents. vstack is just a Python package with optional state under `~/.vstack/`.

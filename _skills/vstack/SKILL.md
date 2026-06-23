@@ -36,13 +36,16 @@ Use this routing table. Pick the first row whose triggers match.
 
 | User said... | Route to |
 |---|---|
+| "Here's a trace, what's wrong?", "just run it", "diagnose this", or a one-phrase failure ("stuck in a loop", "agents arguing") | `/vstack-diagnose` |
 | "Postmortem", "AAR", "what went wrong on this run", "failure", "agent confidently wrong" | `/vstack-post-incident` |
 | "Crew", "multi-agent team", "they don't agree", "groupthink", "psych safety", "trust" | `/vstack-audit-crew` |
 | "Slowing down", "bottleneck", "load", "queues backing up", "centralized orchestrator", "span of control" | `/vstack-bottleneck` |
 | "Culture", "values", "feel of the team", "implicit norms", "the way things actually work" | `/vstack-culture-check` |
+| "Grade this", "are we getting better or worse?", "CI gate on agent behavior", "scorecard" | `/vstack-scorecard` |
 | "Set up monitoring", "calibrate", "track drift", "baseline" | `/vstack-baseline` |
 | "Which pattern should I use?", "what's the right diagnostic?" | `/vstack-pick-pattern` |
 | The user named a specific pattern | Call `vstack_<pattern_name>` directly via MCP |
+| The user has a trace but no clear failure framing | `/vstack-diagnose` (run the default bundle, route deeper on what it surfaces) |
 | None of the above | `/vstack-pick-pattern` (default — let it interview) |
 
 ### Step 3 — Hand off

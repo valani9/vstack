@@ -14,8 +14,8 @@ Where the existing agent ecosystem treats failures as bugs to debug, vstack trea
 2. **34 per-pattern CLIs** — `vstack-lewin analyze --trace trace.json`
 3. **MCP server** — `vstack-mcp serve` for Claude Desktop, Cursor, Cline, Continue, Zed, etc.
 4. **REST API** — `vstack-api serve` (FastAPI on 127.0.0.1:8000) with auth, rate limiting, and observability baked in
-5. **Docker** — `docker run ghcr.io/valani9/vstack:0.7.0`
-6. **Claude Code skills** — 7 task-shaped `SKILL.md` files: `/vstack-aar`, `/vstack-audit-crew`, `/vstack-post-incident`, and more
+5. **Docker** — `docker run ghcr.io/valani9/vstack:0.37.0`
+6. **Claude Code skills** — 9 task-shaped `SKILL.md` files (`vstack-config install-skills`): `/vstack-diagnose`, `/vstack-audit-crew`, `/vstack-post-incident`, `/vstack-scorecard`, and more
 7. **Framework adapters** — LangChain, LangGraph, CrewAI, AutoGen, LlamaIndex, Pydantic AI
 8. **OpenAI Assistants + Anthropic Messages tool JSON** — pure JSON, no install on the consumer side
 9. **Open WebUI plugin** — drop-in tool manifest pointing at a running `vstack-api`

@@ -30,7 +30,7 @@ docker run -d --restart unless-stopped \
   -e VSTACK_CACHE=memory \
   -e VSTACK_HOME=/var/lib/vstack \
   -v vstack-data:/var/lib/vstack \
-  ghcr.io/valani9/vstack:0.6.0 \
+  ghcr.io/valani9/vstack:0.37.0 \
   vstack-api serve --host 0.0.0.0 --port 8000
 ```
 
@@ -81,7 +81,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: ghcr.io/valani9/vstack:0.6.0
+        image: ghcr.io/valani9/vstack:0.37.0
         command: ["vstack-api", "serve", "--host", "0.0.0.0", "--port", "8000"]
         ports: [{containerPort: 8000}]
         env:

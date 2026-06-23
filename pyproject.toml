@@ -1,6 +1,6 @@
 [project]
 name = "valanistack"
-version = "0.36.0"
+version = "0.37.0"
 description = "Organizational behavior, practiced on AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -248,6 +248,10 @@ only-include = []
 "_priority_queue/lib" = "vstack/priority_queue"
 "_snippet/lib" = "vstack/snippet"
 "_aggregate/lib" = "vstack/aggregate"
+# Claude Code skill bundle — shipped inside the wheel so
+# `vstack-config install-skills` works for `pip install` users, not just
+# repo checkouts. Resolved first by `_resolve_skills_source`.
+"_skills" = "vstack/_skills"
 "module-2-team/30-aar-generator/lib" = "vstack/aar"
 "module-2-team/17-lencioni-diagnostic/lib" = "vstack/lencioni"
 "module-2-team/18-trust-triangle-audit/lib" = "vstack/trust_triangle"

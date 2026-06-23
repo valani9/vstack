@@ -6,6 +6,70 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.37.0] — 2026-06-23
+
+Packaging fix + two new Claude Code skills + a documentation truth-up
+across the README, the skill docs, and the docs site to reflect the
+thirty-six library modules and fifty CLIs shipped since v0.7.0.
+
+### Added
+
+- **`/vstack-diagnose` skill** — the fast path. Throws one trace at the
+  cross-pattern `vstack_diagnose` runner and returns a ranked report in a
+  single call; maps a one-phrase failure description ("stuck in a loop",
+  "agents arguing") to a named recipe. Routes deeper (`/vstack-post-incident`,
+  `/vstack-audit-crew`, …) on what it surfaces.
+- **`/vstack-scorecard` skill** — turns diagnose reports into a per-agent /
+  per-fleet letter-graded scorecard, renders it (text / markdown / HTML),
+  and compares two scorecards over time to catch regressions. CI-gateable
+  via `vstack-scorecard compare --fail-on-regression`.
+- Both new skills are wired into the `/vstack` router's routing table.
+
+### Fixed
+
+- **`vstack-config install-skills` now works for `pip install` users.** The
+  `_skills/` bundle is force-included into the wheel as `vstack/_skills/`,
+  and `_resolve_skills_source` checks the wheel-bundled location first
+  (falling back to the two repo-checkout layouts). Previously the command
+  only resolved against a git checkout, so it failed for anyone who
+  installed from PyPI. The resolver is now unit-tested across all three
+  resolution paths.
+- **CI ruff failure** — removed two unused imports in
+  `_otel/tests/test_exporter.py` by replacing a mis-wired test (it claimed
+  to exercise `setup_otel` but called `_otel_check_available`) with real
+  `setup_otel` / `is_enabled` coverage that does not pollute global OTel
+  state.
+
+### Changed
+
+- **README** brought current to v0.37.0: corrected the stale Docker tags
+  (`0.7.0` → `0.37.0`), the test count (`2,150` → `3,131`), and the
+  Claude Code skills surface (now installed via `vstack-config
+  install-skills`, 9 skills). Added a **Feature modules** section
+  cataloguing all thirty-six `vstack.<name>` library modules grouped by
+  role, plus a CLI example for the `vstack-diagnose` / `vstack-recipes`
+  runner.
+- **Docs site** — synced version markers, test counts, and the skills
+  catalog (added `/vstack-diagnose` + `/vstack-scorecard`, removed a
+  reference to a non-existent `/vstack-aar` skill).
+- **CI coverage closed the feature-module gap.** The CI pytest, ruff
+  (check + format), and mypy jobs only covered the original ~15 surface
+  dirs + the 34 pattern libs — none of the 36 feature modules added
+  across v0.20–0.36. They are now wired in: **all 36** feature-module
+  dirs run under pytest + ruff (≈1,016 previously-uncovered tests now
+  gate every push), and the 12 already-`--strict`-clean modules
+  (`_calibrate`, `_streaming`, `_signing`, `_trace_diff`, `_cost_sim`,
+  `_findings_router`, `_alerting`, `_redaction`, `_health`,
+  `_priority_queue`, `_snippet`, `_aggregate`) are added to the mypy
+  matrix. The remaining 24 feature modules need type-annotation cleanup
+  before they can join `mypy --strict` (tracked in `ci.yml`).
+- Test count: 3,127 → 3,131 (+4: three resolver tests, one OTel test).
+
+### Compatibility
+
+- All 3,131 tests pass (1 skipped: crewai not installed).
+- Public API surface strictly expanded. No breaking changes.
+
 ## [0.36.0] — 2026-06-09
 
 Five more feature modules: redaction + health + priority_queue +

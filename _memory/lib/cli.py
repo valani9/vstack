@@ -274,23 +274,30 @@ def _cmd_install_skills(*, source: str | None, force: bool, dry_run: bool) -> in
     return 0
 
 
-def _resolve_skills_source(supplied: str | None) -> Path | None:
+def _resolve_skills_source(supplied: str | None, *, wheel_root: Path | None = None) -> Path | None:
     """Find the bundled _skills/ directory.
 
     Order of resolution:
       1. ``--source`` flag if provided.
-      2. ``_skills/`` next to the installed wheel's vstack/ folder.
-      3. ``_skills/`` two levels up from the installed wheel (repo checkout).
+      2. ``vstack/_skills/`` inside the installed wheel (force-included at
+         build time so ``pip install valanistack`` ships the skills).
+      3. ``_skills/`` next to the installed wheel's vstack/ folder.
+      4. ``_skills/`` two levels up from the installed wheel (repo checkout).
+
+    ``wheel_root`` is injectable for testing; in normal use it is derived
+    from the installed ``vstack`` package location.
     """
     if supplied is not None:
         return Path(supplied).expanduser().resolve()
-    try:
-        import vstack as _v
+    if wheel_root is None:
+        try:
+            import vstack as _v
 
-        wheel_root = Path(_v.__file__).resolve().parent
-    except Exception:
-        return None
+            wheel_root = Path(_v.__file__).resolve().parent
+        except Exception:
+            return None
     for candidate in (
+        wheel_root / "_skills",
         wheel_root.parent / "_skills",
         wheel_root.parent.parent / "_skills",
     ):

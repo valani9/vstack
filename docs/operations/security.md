@@ -53,7 +53,7 @@ We do NOT design for:
 - Every commit gates on `bandit` over the first-party `lib/` dirs.
 - `pip-audit` runs in CI as an informational warn-only step (transitive vulns in framework adapter dep trees can't be unilaterally patched by vstack; report-only is correct).
 - The `vstack-doctor` CLI surfaces real-time misconfiguration (auth-on-without-keys is an ERROR-level finding).
-- No CVEs in first-party vstack code as of v0.6.0.
+- No CVEs in first-party vstack code as of v0.37.0.
 
 ## Reporting a vulnerability
 

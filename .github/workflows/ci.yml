@@ -51,6 +51,14 @@ jobs:
                  _browser/ _gbrain/ _benchmarks/ \
                  _security/ _cache/ _observability/ _doctor/ \
                  _hello/ \
+                 _diagnose/ _dashboard/ _scorecard/ _budget/ _trace_zoo/ \
+                 _replay/ _vcache/ _otel/ _compose/ _vdiff/ _calibrate/ \
+                 _streaming/ _vbench/ _markers/ _signing/ _synth/ _veval/ \
+                 _recipes_dsl/ _heatmap/ _policy/ _budgeter/ _tracer/ \
+                 _export/ _findings_db/ _trace_diff/ _timeline/ _cost_sim/ \
+                 _findings_router/ _alerting/ _eval_gates/ \
+                 _intervention_tracker/ _redaction/ _health/ \
+                 _priority_queue/ _snippet/ _aggregate/ \
             -v --tb=short \
             --cov=vstack \
             --cov-report=term-missing \
@@ -84,14 +92,28 @@ jobs:
           ruff check module-1-individual/ module-2-team/ module-3-organization/ \
                      _mcp/ _memory/ _upgrade/ _api/ _adapters/ _learnings/ _analytics/ \
                      _browser/ _gbrain/ _benchmarks/ examples/ _baselines/scripts/ \
-                     _security/ _cache/ _observability/ _doctor/ _hello/
+                     _security/ _cache/ _observability/ _doctor/ _hello/ \
+                     _diagnose/ _dashboard/ _scorecard/ _budget/ _trace_zoo/ _replay/ \
+                     _vcache/ _otel/ _compose/ _vdiff/ _calibrate/ _streaming/ _vbench/ \
+                     _markers/ _signing/ _synth/ _veval/ _recipes_dsl/ _heatmap/ _policy/ \
+                     _budgeter/ _tracer/ _export/ _findings_db/ _trace_diff/ _timeline/ \
+                     _cost_sim/ _findings_router/ _alerting/ _eval_gates/ \
+                     _intervention_tracker/ _redaction/ _health/ _priority_queue/ \
+                     _snippet/ _aggregate/
 
       - name: Run ruff format check
         run: |
           ruff format --check module-1-individual/ module-2-team/ module-3-organization/ \
                               _mcp/ _memory/ _upgrade/ _api/ _adapters/ _learnings/ _analytics/ \
                               _browser/ _gbrain/ _benchmarks/ examples/ _baselines/scripts/ \
-                              _security/ _cache/ _observability/ _doctor/ _hello/
+                              _security/ _cache/ _observability/ _doctor/ _hello/ \
+                              _diagnose/ _dashboard/ _scorecard/ _budget/ _trace_zoo/ _replay/ \
+                              _vcache/ _otel/ _compose/ _vdiff/ _calibrate/ _streaming/ _vbench/ \
+                              _markers/ _signing/ _synth/ _veval/ _recipes_dsl/ _heatmap/ _policy/ \
+                              _budgeter/ _tracer/ _export/ _findings_db/ _trace_diff/ _timeline/ \
+                              _cost_sim/ _findings_router/ _alerting/ _eval_gates/ \
+                              _intervention_tracker/ _redaction/ _health/ _priority_queue/ \
+                              _snippet/ _aggregate/
 
   typecheck:
     name: Typecheck (mypy)
@@ -117,6 +139,13 @@ jobs:
         # produces a 'Duplicate module named "lib"' error; running each
         # pattern's lib separately avoids that and gives clearer per-pattern
         # output. New patterns add another line here.
+        #
+        # Feature modules are added here once they pass mypy --strict.
+        # Still pending type-annotation cleanup (NOT yet in this list):
+        # _diagnose _dashboard _scorecard _budget _trace_zoo _replay
+        # _vcache _otel _compose _vdiff _vbench _markers _synth _veval
+        # _recipes_dsl _heatmap _policy _budgeter _tracer _export
+        # _findings_db _timeline _eval_gates _intervention_tracker.
         run: |
           set -e
           for pattern in \
@@ -135,6 +164,18 @@ jobs:
               _observability \
               _doctor \
               _hello \
+              _calibrate \
+              _streaming \
+              _signing \
+              _trace_diff \
+              _cost_sim \
+              _findings_router \
+              _alerting \
+              _redaction \
+              _health \
+              _priority_queue \
+              _snippet \
+              _aggregate \
               module-2-team/30-aar-generator \
               module-2-team/17-lencioni-diagnostic \
               module-2-team/18-trust-triangle-audit \

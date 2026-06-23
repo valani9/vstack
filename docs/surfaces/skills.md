@@ -1,15 +1,17 @@
 # Claude Code skills
 
-Seven task-shaped skills under [`_skills/`](https://github.com/valani9/vstack/tree/main/_skills) compose vstack's 34 patterns into real workflows.
+Nine task-shaped skills under [`_skills/`](https://github.com/valani9/vstack/tree/main/_skills) compose vstack's 34 patterns into real workflows.
 
 | Skill | What it does | Patterns composed |
 |---|---|---|
 | `/vstack` | Meta entry — routes a free-form complaint to the right skill. | _(meta only)_ |
+| `/vstack-diagnose` | Fast path — one trace in, ranked cross-pattern report out, in one call. | `vstack_diagnose` runner (default bundle or recipe) |
 | `/vstack-pick-pattern` | Interview-based pattern picker. | _(meta only — surfaces all 34)_ |
 | `/vstack-post-incident` | AAR → Lewin → 1-2 downstream patterns. | `aar`, `lewin`, dynamic downstream |
 | `/vstack-audit-crew` | 5-pattern crew health check. | `lencioni`, `psych_safety`, `trust_triangle`, `process_gain_loss`, `bias_stack` |
 | `/vstack-bottleneck` | Load + structure diagnosis. | `span_of_control`, `org_structure`, `social_loafing`, `superflocks` |
 | `/vstack-culture-check` | Surface-vs-assumption-layer culture audit. | `schein_culture`, `robbins_culture`, optional `mcgregor` |
+| `/vstack-scorecard` | Grade an agent/fleet, render it, compare over time (CI-gateable). | `vstack-scorecard` over diagnose reports |
 | `/vstack-baseline` | Record + verify monitoring baselines. | All 34 |
 
 ## Install

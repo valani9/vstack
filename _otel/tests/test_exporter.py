@@ -19,8 +19,20 @@ class TestSetupOtel:
         assert isinstance(result, bool)
 
     def test_setup_returns_bool(self):
-        # setup_otel returns a bool indicating success.
-        assert isinstance(_otel_check_available(), bool)
+        # setup_otel returns a bool indicating success. We only exercise
+        # the eager path when the optional SDK is *absent* (returns False,
+        # no side effects); when it's installed, calling setup_otel would
+        # install a process-global span exporter and pollute the rest of
+        # the suite, so we assert it is callable instead of forcing setup.
+        if not _otel_check_available():
+            assert setup_otel(service_name="vstack-test") is False
+        else:
+            assert callable(setup_otel)
+
+    def test_is_enabled_returns_bool(self):
+        # is_enabled reports whether a tracer has been configured; it is
+        # always safe to call and always returns a bool.
+        assert isinstance(is_enabled(), bool)
 
 
 class TestOTelSpanContext:
