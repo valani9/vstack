@@ -33,7 +33,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Literal, Sequence, cast
 
-from .registry import ALL_SHAPES, PATTERNS
+from .registry import ALL_SHAPES, PATTERNS, SEVERITY_ORDER, severity_rank
 from .runner import diagnose as _diagnose
 
 # Mirrors vstack.aar.TraceStep.type. Kept local so the CLI does not import
@@ -289,6 +289,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=5,
         help="Number of top findings to surface in the Markdown render (default: 5).",
     )
+    parser.add_argument(
+        "--fail-on",
+        choices=SEVERITY_ORDER,
+        default=None,
+        help=(
+            "Exit non-zero (3) if any finding is at or above this severity. "
+            "Use to gate CI directly on the diagnosis. Omit to never fail on findings."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.list:
@@ -357,6 +366,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("\n".join(lines))
         else:
             print(report.to_markdown())
+
+    # CI gate: exit non-zero when a finding reaches the --fail-on threshold.
+    return _gate_exit_code(report.findings, args.fail_on)
+
+
+def _gate_exit_code(findings: "list[Any]", fail_on: str | None) -> int:
+    """Return 3 if any finding is at/above ``fail_on``, else 0.
+
+    ``fail_on=None`` never gates. Factored out for direct testing.
+    """
+    if fail_on is None:
+        return 0
+    threshold = severity_rank(fail_on)
+    above = [f for f in findings if severity_rank(f.severity) >= threshold]
+    if above:
+        worst = max(above, key=lambda f: severity_rank(f.severity))
+        print(
+            f"vstack-diagnose: gate failed — found {worst.severity} finding (>= {fail_on}).",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 

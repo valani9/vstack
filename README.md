@@ -20,6 +20,14 @@
 >
 > Both are in this library. Along with 32 more.
 
+<p align="center">
+  <img src="docs/assets/demo.svg" alt="vstack terminal demo: pip install, vstack-hello prints a real After-Action Review of a failed agent run, and vstack-diagnose --fail-on high gates CI." width="100%"/>
+</p>
+
+<p align="center">
+  <sub><code>pip install valanistack && vstack-hello --offline</code> — 30 seconds, no API key. <a href="docs/assets/demo.cast">▶ asciinema cast</a></sub>
+</p>
+
 ## The story
 
 In my first semester at **Boston University**, I took **MO221 — Management & Organizations**. Our team got stuck on a group project. Three weeks in, we were arguing about scope instead of working — two people had quietly checked out. The course handed us a worksheet: the Wharton four-step **After-Action Review**, plus Lencioni's **Five Dysfunctions** diagnostic. Forty minutes later we had seven specific things to change. We shipped on&nbsp;time.

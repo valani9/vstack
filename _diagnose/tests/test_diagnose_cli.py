@@ -128,3 +128,39 @@ def test_runs_diagnose_with_none_client_markdown_output() -> None:
     # No findings because the only pattern errored out, but the report
     # should still include the Pattern errors section.
     assert "lewin" in out
+
+
+# ----------------------------------------------------------------------
+# --fail-on CI gate
+# ----------------------------------------------------------------------
+
+
+def test_gate_exit_code_logic() -> None:
+    from vstack.diagnose import Finding
+    from vstack.diagnose.cli import _gate_exit_code
+
+    findings = [
+        Finding(pattern="p", severity="high", title="t"),
+        Finding(pattern="q", severity="low", title="u"),
+    ]
+    assert _gate_exit_code(findings, "high") == 3  # a high finding at/above 'high'
+    assert _gate_exit_code(findings, "critical") == 0  # nothing reaches 'critical'
+    assert _gate_exit_code(findings, None) == 0  # no gate
+    assert _gate_exit_code([], "high") == 0  # no findings
+
+
+def test_fail_on_no_findings_exits_zero() -> None:
+    # With --client none on a thin trace there are no findings, so the gate
+    # passes (exit 0) even at the strictest threshold.
+    payload = {
+        "agent_id": "a",
+        "goal": "g",
+        "steps": [{"timestamp": "2026-01-01T00:00:00Z", "type": "observation", "content": "x"}],
+        "outcome": "o",
+        "success": False,
+    }
+    code, _out, _err = _run(
+        ["--client", "none", "--shape", "individual", "--fail-on", "low"],
+        stdin=json.dumps(payload),
+    )
+    assert code == 0

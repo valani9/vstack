@@ -6,6 +6,33 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.46.0] — 2026-06-23
+
+A new CI-gate primitive on the core CLI + launch-grade README demo.
+
+### Added
+
+- **`vstack-diagnose --fail-on <severity>`** — the diagnose CLI is now a
+  self-contained CI gate: it exits `3` when any finding is at or above the
+  given severity (`none`…`critical`), so **any** CI (not just the GitHub
+  Action) can gate on agent quality with one command. Omit the flag to
+  never fail on findings (current behavior). The GitHub Action and the
+  standalone CLI now share the same severity semantics.
+- **Launch demo assets** — `docs/assets/demo.svg` (an inline, GitHub-
+  rendered terminal card built from real `vstack-hello --offline` output)
+  and `docs/assets/demo.cast` (an asciinema v2 recording of the session).
+  The README now opens with the demo.
+
+### Changed
+
+- README hero: added the terminal demo + a one-line "30 seconds, no API
+  key" call to action up top.
+
+### Compatibility
+
+- All tests pass (new `--fail-on` gate + helper covered). No breaking
+  changes — `--fail-on` defaults to off.
+
 ## [0.45.0] — 2026-06-23
 
 A new invocation surface: vstack now ships as a **GitHub Action** to gate
