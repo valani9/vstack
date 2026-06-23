@@ -1,0 +1,44 @@
+# Example: gate agent quality in CI with the vstack GitHub Action.
+#
+# Drop this in your repo at .github/workflows/agent-quality-gate.yml.
+# It runs vstack's 34 organizational-behavior patterns against an agent
+# trace you produce in CI and fails the build on high-severity findings.
+
+name: Agent quality gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  vstack-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Produce the trace your agent run emits. This step is yours — write
+      # an AgentTrace JSON to traces/latest.json. (vstack-synth can generate
+      # a sample one for trying this out: `vstack-synth gen --template
+      # stuck_in_loop --out traces/latest.json`.)
+      - name: Produce agent trace
+        run: |
+          mkdir -p traces
+          # ... your agent run here, writing traces/latest.json ...
+
+      # Deterministic smoke gate (no API key needed):
+      - name: vstack gate (deterministic)
+        uses: valani9/vstack@v0.45.0
+        with:
+          trace: traces/latest.json
+          fail-on: high
+
+      # Full LLM-backed gate (needs a key in repo secrets):
+      - name: vstack gate (LLM-backed)
+        uses: valani9/vstack@v0.45.0
+        with:
+          trace: traces/latest.json
+          client: anthropic
+          mode: standard
+          fail-on: high
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

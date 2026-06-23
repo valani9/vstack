@@ -1,0 +1,101 @@
+name: "vstack agent-quality gate"
+description: >-
+  Diagnose an AI-agent trace with vstack's 34 organizational-behavior
+  patterns and fail the build when findings reach a severity threshold.
+author: "Ilhan Valani"
+branding:
+  icon: "git-pull-request"
+  color: "purple"
+
+inputs:
+  trace:
+    description: "Path to the agent trace JSON to diagnose."
+    required: true
+  fail-on:
+    description: >-
+      Minimum finding severity that fails the build, one of:
+      none | trace | low | moderate | medium | high | critical.
+      Use 'none' to report without ever failing.
+    required: false
+    default: "high"
+  mode:
+    description: "Analysis depth: quick | standard | forensic."
+    required: false
+    default: "standard"
+  recipe:
+    description: "Optional named recipe bundle (see `vstack-recipes`)."
+    required: false
+    default: ""
+  client:
+    description: >-
+      LLM client for analyzers that need one: none | anthropic | openai |
+      ollama. Defaults to 'none' (deterministic analyzers only, no API key
+      needed). For full findings, set 'anthropic'/'openai' and provide the
+      matching API key via env.
+    required: false
+    default: "none"
+  shape:
+    description: "Force trace shape: individual | team | org (default: inferred)."
+    required: false
+    default: ""
+  version:
+    description: "valanistack version to install (e.g. '0.45.0'). Empty = latest."
+    required: false
+    default: ""
+  python-version:
+    description: "Python version to set up."
+    required: false
+    default: "3.13"
+
+outputs:
+  max-severity:
+    description: "Highest finding severity seen (or 'none')."
+    value: ${{ steps.gate.outputs.max-severity }}
+  findings-count:
+    description: "Total number of findings."
+    value: ${{ steps.gate.outputs.findings-count }}
+  report:
+    description: "Path to the written JSON report."
+    value: ${{ steps.gate.outputs.report }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install vstack
+      shell: bash
+      env:
+        VSTACK_CLIENT: ${{ inputs.client }}
+        VSTACK_VERSION: ${{ inputs.version }}
+      run: |
+        pkg="valanistack"
+        extra=""
+        case "$VSTACK_CLIENT" in
+          anthropic) extra="[anthropic]" ;;
+          openai)    extra="[openai]" ;;
+        esac
+        ver=""
+        if [ -n "$VSTACK_VERSION" ]; then
+          case "$VSTACK_VERSION" in
+            [0-9]*) ver="==$VSTACK_VERSION" ;;
+            *)      ver="$VSTACK_VERSION" ;;
+          esac
+        fi
+        python -m pip install --upgrade pip >/dev/null
+        python -m pip install "${pkg}${extra}${ver}"
+
+    - name: Run vstack gate
+      id: gate
+      shell: bash
+      env:
+        VSTACK_TRACE: ${{ inputs.trace }}
+        VSTACK_FAIL_ON: ${{ inputs.fail-on }}
+        VSTACK_MODE: ${{ inputs.mode }}
+        VSTACK_RECIPE: ${{ inputs.recipe }}
+        VSTACK_CLIENT: ${{ inputs.client }}
+        VSTACK_SHAPE: ${{ inputs.shape }}
+      run: python "${{ github.action_path }}/.github/action/gate.py"

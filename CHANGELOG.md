@@ -6,6 +6,30 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.45.0] — 2026-06-23
+
+A new invocation surface: vstack now ships as a **GitHub Action** to gate
+agent quality in CI. Thirteen invocation surfaces.
+
+### Added
+
+- **GitHub Action (`uses: valani9/vstack@v0.45.0`)** — a composite action
+  that installs vstack, runs `vstack-diagnose` on a trace, and **fails the
+  build** when any finding is at or above a `fail-on` severity threshold
+  (`none`…`critical`). Inputs: `trace`, `fail-on`, `mode`, `recipe`,
+  `client`, `shape`, `version`, `python-version`. Outputs: `max-severity`,
+  `findings-count`, `report`. Writes a findings table to the job summary.
+  `client: none` (default) runs the deterministic analyzers with no API key
+  — a free smoke gate; set a provider for full LLM-backed findings.
+  - `action.yml` (repo root) + `.github/action/gate.py` (gate logic, reuses
+    vstack's own `severity_rank`) + 9 unit tests, wired into CI.
+  - Example consumer workflow:
+    `examples/github-action/agent-quality-gate.yml`.
+
+### Compatibility
+
+- All tests pass. No breaking changes.
+
 ## [0.44.0] — 2026-06-23
 
 Two more shell CLIs + a `vstack-doctor` consistency fix. CLI surface:

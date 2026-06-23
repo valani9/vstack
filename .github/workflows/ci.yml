@@ -59,6 +59,7 @@ jobs:
                  _findings_router/ _alerting/ _eval_gates/ \
                  _intervention_tracker/ _redaction/ _health/ \
                  _priority_queue/ _snippet/ _aggregate/ \
+                 .github/action/ \
             -v --tb=short \
             --cov=vstack \
             --cov-report=term-missing \
@@ -99,7 +100,7 @@ jobs:
                      _budgeter/ _tracer/ _export/ _findings_db/ _trace_diff/ _timeline/ \
                      _cost_sim/ _findings_router/ _alerting/ _eval_gates/ \
                      _intervention_tracker/ _redaction/ _health/ _priority_queue/ \
-                     _snippet/ _aggregate/
+                     _snippet/ _aggregate/ .github/action/
 
       - name: Run ruff format check
         run: |
@@ -113,7 +114,7 @@ jobs:
                               _budgeter/ _tracer/ _export/ _findings_db/ _trace_diff/ _timeline/ \
                               _cost_sim/ _findings_router/ _alerting/ _eval_gates/ \
                               _intervention_tracker/ _redaction/ _health/ _priority_queue/ \
-                              _snippet/ _aggregate/
+                              _snippet/ _aggregate/ .github/action/
 
   typecheck:
     name: Typecheck (mypy)

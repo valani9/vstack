@@ -298,9 +298,9 @@ Three modules mirror the standard org-behavior curriculum: **individual** behavi
 
 Full per-pattern READMEs + academic citations + Substack-ready essays live under [`module-1-individual/`](module-1-individual/), [`module-2-team/`](module-2-team/), and [`module-3-organization/`](module-3-organization/). The full index is in [PATTERNS.md](PATTERNS.md).
 
-## Invocation surfaces (12 ways to use vstack)
+## Invocation surfaces (13 ways to use vstack)
 
-vstack ships **12 invocation surfaces**. Same patterns, same data shape, different entry point.
+vstack ships **13 invocation surfaces**. Same patterns, same data shape, different entry point.
 
 | # | Surface | Get it with | Use when |
 |---|---|---|---|
@@ -316,6 +316,7 @@ vstack ships **12 invocation surfaces**. Same patterns, same data shape, differe
 | 10 | **Tier B platform generators** | `vstack-config gen-platform <client>` | Aider · Goose · Kiro · OpenClaw · Codex CLI · OpenCode · docker-compose |
 | 11 | **Browser dev tooling** | `pip install "valanistack[browser]"` · `vstack-browser` | LangSmith · Phoenix · Helicone · Langfuse · Arize trace scraping |
 | 12 | **First-run smoke** | `vstack-hello` | 30-second end-to-end demo — proves the install works |
+| 13 | **GitHub Action** | `uses: valani9/vstack@v0.45.0` | Gate agent quality in CI — diagnose a trace, fail the build on findings ≥ a severity threshold |
 
 ## Feature modules
 
@@ -498,6 +499,22 @@ vstack-api serve                                          # 6. boot
 ```
 
 Full deploy + Kubernetes runbook: [docs/operations/deploy.md](docs/operations/deploy.md). Three-ring security model: [docs/operations/security.md](docs/operations/security.md).
+
+## Gate agent quality in CI (GitHub Action)
+
+vstack ships as a composite **GitHub Action** so you can shift agent-quality left — diagnose a trace on every PR and fail the build when findings cross a severity threshold:
+
+```yaml
+- uses: valani9/vstack@v0.45.0
+  with:
+    trace: traces/latest.json     # the AgentTrace JSON your run emits
+    fail-on: high                 # none | trace | low | moderate | medium | high | critical
+    client: anthropic             # 'none' (default) needs no key; set a provider for full findings
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+It writes a findings table to the job summary and exposes `max-severity`, `findings-count`, and `report` outputs. With `client: none` it runs the deterministic analyzers only (no API key needed) — a free smoke gate. Full example: [examples/github-action/agent-quality-gate.yml](examples/github-action/agent-quality-gate.yml).
 
 ## Framework adapters
 
