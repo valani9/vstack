@@ -6,6 +6,33 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.47.0] — 2026-06-23
+
+Citability + positioning: a JOSS software-paper draft and a "why vstack"
+comparison.
+
+### Added
+
+- **JOSS paper draft** — `paper/paper.md` (+ `paper/paper.bib`), a Journal
+  of Open Source Software submission draft with a Summary and Statement of
+  Need, grounded in vstack's real OB citations (Lewin, Edmondson, Lencioni,
+  Tversky & Kahneman, Staw, Latané et al., and others). The ORCID is a
+  placeholder flagged for the author to fill before submission.
+- **"vstack vs. eval/observability" comparison table** in the README,
+  clarifying that vstack answers *why a run failed and what the fix is* —
+  complementary to eval (pass/fail) and observability (telemetry).
+- **"Citing vstack"** README section pointing at `CITATIONS.md`,
+  `CITATION.cff`, and the paper.
+
+### Changed
+
+- `CITATION.cff` brought current: version `0.7.0` → `0.47.0`, "12 invocation
+  surfaces" → 13, and the adapter list updated to all ten frameworks.
+
+### Compatibility
+
+- Documentation/metadata only — no code or API changes. All tests pass.
+
 ## [0.46.0] — 2026-06-23
 
 A new CI-gate primitive on the core CLI + launch-grade README demo.

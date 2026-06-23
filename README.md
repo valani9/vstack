@@ -65,6 +65,19 @@ Every pattern ships **five layers**: a README with citation, a runnable Python l
 - **Researchers** mapping agent behavior to human organizational-behavior literature.
 - **Teams** that want the same retrospective rigor applied to LLM runs that they apply to humans.
 
+### vstack vs. the tools you already have
+
+vstack is complementary to eval and observability stacks — it answers a different question.
+
+| | **Eval** (LLM-judge, pass/fail) | **Observability** (LangSmith, Phoenix, …) | **vstack** |
+|---|---|---|---|
+| Answers | *Did it pass?* | *What happened / how much did it cost?* | ***Why* did it fail, and what's the fix?** |
+| Output | a score | spans, tokens, latency | named failure mode → root cause → intervention |
+| Grounding | a rubric you write | runtime telemetry | 70 years of cited OB research |
+| In CI | gate on a threshold score | dashboards / alerts | gate on a named finding's severity (`vstack-diagnose --fail-on high`) |
+
+You still run evals and tracing. vstack turns the traces they produce into a forensic, named diagnosis.
+
 ## Quick start
 
 ```bash
@@ -725,6 +738,10 @@ docker rmi ghcr.io/valani9/vstack:0.37.0 2>/dev/null
 ```
 
 That's it. No system-level installers, no daemons, no LaunchAgents. vstack is just a Python package with optional state under `~/.vstack/`.
+
+## Citing vstack
+
+If you reference vstack in academic work, cite both the underlying OB framework (see [CITATIONS.md](CITATIONS.md)) and the library. Machine-readable metadata is in [CITATION.cff](CITATION.cff) (GitHub's "Cite this repository"), and a software paper draft lives at [paper/paper.md](paper/paper.md).
 
 ## License
 
