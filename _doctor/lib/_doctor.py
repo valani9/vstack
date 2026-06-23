@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import os
 import shutil
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -125,7 +126,11 @@ def _check_cli_on_path(name: str) -> CheckResult:
 
 def _check_optional_extra(name: str, module: str, extra: str) -> CheckResult:
     try:
-        importlib.import_module(module)
+        # Probing an optional dep shouldn't surface its own internal
+        # deprecation/user warnings (some frameworks warn loudly on import).
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            importlib.import_module(module)
         return CheckResult(f"extra/{name}", HealthStatus.OK, f"{name} ({module}) installed.")
     except ImportError:
         return CheckResult(
@@ -133,6 +138,13 @@ def _check_optional_extra(name: str, module: str, extra: str) -> CheckResult:
             HealthStatus.WARNING,
             f"{name} not installed (optional).",
             hint=f"pip install 'valanistack[{extra}]'",
+        )
+    except Exception as e:  # noqa: BLE001 - a broken optional dep shouldn't crash the doctor
+        return CheckResult(
+            f"extra/{name}",
+            HealthStatus.WARNING,
+            f"{name} is installed but failed to import: {e}",
+            hint=f"Reinstall the framework or pin a compatible version: pip install 'valanistack[{extra}]'",
         )
 
 
@@ -336,6 +348,10 @@ _EXTRAS: tuple[tuple[str, str, str], ...] = (
     ("langgraph", "langgraph", "langgraph"),
     ("llama_index_core", "llama_index.core", "llamaindex"),
     ("pydantic_ai", "pydantic_ai", "pydantic_ai"),
+    ("crewai", "crewai", "crewai"),
+    ("smolagents", "smolagents", "smolagents"),
+    ("google_adk", "google.adk", "adk"),
+    ("strands", "strands", "strands"),
 )
 
 

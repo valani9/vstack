@@ -6,6 +6,32 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.44.0] — 2026-06-23
+
+Two more shell CLIs + a `vstack-doctor` consistency fix. CLI surface:
+57 → 59.
+
+### Added
+
+- **`vstack-synth`** — generate synthetic agent traces for testing, demos,
+  and onboarding: `list` (show templates/scenarios) + `gen --template
+  <name> [--count N] [--seed S] [--out file]`. Pure generation, no LLM.
+- **`vstack-vdiff`** — `--before a.json --after b.json [--json]` diffs two
+  `DiagnoseReport`s and renders the delta (findings added / removed /
+  changed, severity shifts).
+
+### Fixed
+
+- **`vstack-doctor` optional-extra checks now cover every framework
+  adapter.** The list was missing `crewai`, `smolagents`, `google-adk`, and
+  `strands`; all four are added. The probe also now suppresses an optional
+  dep's own import-time warnings and degrades to a WARNING (instead of
+  crashing) if an installed framework fails to import.
+
+### Compatibility
+
+- All tests pass. No breaking changes.
+
 ## [0.43.0] — 2026-06-23
 
 Two more framework adapters — vstack's 34 patterns now bind natively to
