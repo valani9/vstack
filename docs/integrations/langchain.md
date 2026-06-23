@@ -290,7 +290,7 @@ result = diagnosed_invoke(chain, {"question": "..."}, goal="...")
 
 ## See also
 
-- LangChain-specific [composition graphs](../composition.md#langchain)
+- The [composition runbook](../concepts/composition.md) — how patterns chain together
 - Adapter source: `_adapters/lib/langchain_core_adapter.py`
 - LangGraph example: `examples/cookbook/09_bottleneck_orchestrator.py`
 - Live LangChain demo: `examples/patterns/01_lewin.py`
