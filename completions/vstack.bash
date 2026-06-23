@@ -107,6 +107,84 @@ _vstack_hello_completions() {
     COMPREPLY=( $(compgen -W "--offline --json --no-banner --help" -- "$cur") )
 }
 
+# Shared completion for the 33 pattern CLIs (all share the same subcommands).
+_vstack_pattern_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "analyze batch replay validate schema playbooks compose" -- "$cur") )
+        return 0
+    fi
+}
+
+# Bare vstack umbrella CLI.
+_vstack_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "aar bench version" -- "$cur") )
+        return 0
+    fi
+}
+
+# Workflow CLIs.
+_vstack_diagnose_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "--trace --recipe --client --shape --mode --patterns --list-recipes --list --json --top --match --help" -- "$cur") )
+}
+
+_vstack_recipes_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "--cluster --shape --match --q --show --json --md --compact --help" -- "$cur") )
+}
+
+_vstack_scorecard_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "compute render compare" -- "$cur") )
+        return 0
+    fi
+}
+
+_vstack_dashboard_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "render serve" -- "$cur") )
+        return 0
+    fi
+}
+
+_vstack_trace_zoo_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "list show get categories shapes" -- "$cur") )
+        return 0
+    fi
+}
+
+_vstack_redaction_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "--trace --text --list-patterns --out --json --help" -- "$cur") )
+}
+
+_vstack_export_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "--report --format --out --help" -- "$cur") )
+}
+
+_vstack_aggregate_completions() {
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "--reports --top --json --out --help" -- "$cur") )
+}
+
 complete -F _vstack_mcp_completions vstack-mcp
 complete -F _vstack_api_completions vstack-api
 complete -F _vstack_config_completions vstack-config
@@ -117,3 +195,30 @@ complete -F _vstack_gbrain_completions vstack-gbrain
 complete -F _vstack_bench_completions vstack-bench
 complete -F _vstack_doctor_completions vstack-doctor
 complete -F _vstack_hello_completions vstack-hello
+
+# Bare vstack umbrella CLI.
+complete -F _vstack_completions vstack
+
+# Workflow CLIs.
+complete -F _vstack_diagnose_completions vstack-diagnose
+complete -F _vstack_recipes_completions vstack-recipes
+complete -F _vstack_scorecard_completions vstack-scorecard
+complete -F _vstack_dashboard_completions vstack-dashboard
+complete -F _vstack_trace_zoo_completions vstack-trace-zoo
+complete -F _vstack_redaction_completions vstack-redaction
+complete -F _vstack_export_completions vstack-export
+complete -F _vstack_aggregate_completions vstack-aggregate
+
+# 33 pattern CLIs — all share _vstack_pattern_completions.
+for _vstack_pattern_cli in \
+    vstack-lewin vstack-goleman vstack-johari vstack-danva vstack-reappraisal \
+    vstack-yerkes vstack-hexaco vstack-grant vstack-motivation vstack-sdt \
+    vstack-mcgregor vstack-vroom vstack-grpi vstack-process vstack-loafing \
+    vstack-superflocks vstack-lencioni vstack-trust-triangle vstack-mcallister \
+    vstack-psych-safety vstack-glaser vstack-feedback-triggers vstack-plus-delta \
+    vstack-smart-goal vstack-group-decision vstack-debate-pathology vstack-bias-stack \
+    vstack-devils-advocate vstack-thomas-kilmann vstack-schein-culture \
+    vstack-robbins-culture vstack-org-structure vstack-span-of-control; do
+    complete -F _vstack_pattern_completions "$_vstack_pattern_cli"
+done
+unset _vstack_pattern_cli

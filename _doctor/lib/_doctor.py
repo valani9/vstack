@@ -289,7 +289,10 @@ def _check_api_security_posture() -> CheckResult:
 # ----------------------------------------------------------------------
 
 
-_CLIS = (
+# Core CLIs that ship with the base install — used as a fallback only when
+# entry-point metadata can't be read (e.g. running from a source tree that
+# was never installed). The live check enumerates the real console_scripts.
+_CORE_CLIS_FALLBACK = (
     "vstack",
     "vstack-mcp",
     "vstack-api",
@@ -301,6 +304,28 @@ _CLIS = (
     "vstack-gbrain",
     "vstack-bench",
 )
+
+
+def _discover_clis() -> tuple[str, ...]:
+    """Enumerate every console-script the installed valanistack ships.
+
+    Reads the distribution's ``console_scripts`` entry points so the doctor
+    validates *all* CLIs (currently 53) and never goes stale as new ones are
+    added. Falls back to the core list if the distribution metadata isn't
+    available (e.g. an uninstalled source checkout).
+    """
+    try:
+        from importlib.metadata import PackageNotFoundError, distribution
+
+        try:
+            eps = distribution("valanistack").entry_points
+        except PackageNotFoundError:
+            return _CORE_CLIS_FALLBACK
+        names = sorted(e.name for e in eps if e.group == "console_scripts")
+        return tuple(names) if names else _CORE_CLIS_FALLBACK
+    except Exception:
+        return _CORE_CLIS_FALLBACK
+
 
 _EXTRAS: tuple[tuple[str, str, str], ...] = (
     ("anthropic", "anthropic", "anthropic"),
@@ -330,7 +355,7 @@ def run_all_checks(*, skip_network: bool = False) -> DoctorReport:
         _check_gbrain(),
         _check_node_for_browser(),
     ]
-    for name in _CLIS:
+    for name in _discover_clis():
         checks.append(_check_cli_on_path(name))
     for extra_name, module, extra_pkg in _EXTRAS:
         checks.append(_check_optional_extra(extra_name, module, extra_pkg))

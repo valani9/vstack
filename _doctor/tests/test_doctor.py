@@ -8,6 +8,7 @@ import pytest
 
 import vstack.doctor as doctor
 from vstack.doctor._doctor import (
+    _CORE_CLIS_FALLBACK,
     HealthStatus,
     _check_api_security_posture,
     _check_cli_on_path,
@@ -15,6 +16,7 @@ from vstack.doctor._doctor import (
     _check_pattern_registry,
     _check_python_version,
     _check_vstack_version,
+    _discover_clis,
     run_all_checks,
 )
 from vstack.doctor.cli import main as cli_main
@@ -47,6 +49,42 @@ def test_home_dir_writable(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
 def test_cli_on_path_missing() -> None:
     result = _check_cli_on_path("definitely-not-a-real-cli-zzz")
     assert result.status == HealthStatus.ERROR
+
+
+def test_discover_clis_enumerates_installed_scripts() -> None:
+    # When valanistack is installed, discovery returns the real console
+    # scripts — far more than the core fallback, and including modern CLIs
+    # that the old hardcoded list missed.
+    clis = _discover_clis()
+    assert "vstack" in clis
+    assert "vstack-doctor" in clis  # doctor itself was missing from the old list
+    # workflow + module CLIs that the stale hardcoded list never checked
+    for name in ("vstack-diagnose", "vstack-scorecard", "vstack-redaction", "vstack-lewin"):
+        assert name in clis, f"{name} should be discovered"
+    # the installed surface is much larger than the 10-entry fallback
+    assert len(clis) > len(_CORE_CLIS_FALLBACK)
+
+
+def test_discover_clis_falls_back_when_metadata_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # If distribution metadata can't be read, fall back to the core list
+    # rather than checking nothing.
+    import importlib.metadata as md
+
+    def _boom(_name: str) -> object:
+        raise md.PackageNotFoundError("valanistack")
+
+    monkeypatch.setattr(md, "distribution", _boom)
+    assert _discover_clis() == _CORE_CLIS_FALLBACK
+
+
+def test_run_all_checks_validates_every_installed_cli() -> None:
+    # The doctor must check every discovered CLI, not a stale subset.
+    report = run_all_checks(skip_network=True)
+    cli_checks = {c.name for c in report.checks if c.name.startswith("cli/")}
+    expected = {f"cli/{name}" for name in _discover_clis()}
+    assert cli_checks == expected
 
 
 def test_api_security_warns_on_require_without_keys(

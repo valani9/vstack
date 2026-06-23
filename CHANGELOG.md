@@ -6,6 +6,34 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.40.0] — 2026-06-23
+
+Tooling correctness: `vstack-doctor` and the shell completions now know
+about every CLI instead of a stale subset.
+
+### Fixed
+
+- **`vstack-doctor` only validated 10 of the 53 CLIs.** Its CLI list was
+  hardcoded and stale (it didn't even check `vstack-doctor` itself, nor any
+  pattern or workflow CLI). It now enumerates the installed
+  `console_scripts` entry points dynamically, so it validates **all 53**
+  CLIs and never goes stale as new ones ship (falls back to the core list
+  only when distribution metadata is unreadable). Added tests for the
+  discovery, the metadata-missing fallback, and that `run_all_checks`
+  covers every discovered CLI.
+- **Shell completions covered only ~14 of 53 CLIs.** The bash, zsh, and
+  fish completions now cover all 53: a shared completion for the 33
+  per-pattern CLIs (`analyze`/`batch`/`replay`/`validate`/`schema`/
+  `playbooks`/`compose`) plus the 8 workflow CLIs (`vstack-diagnose`,
+  `vstack-recipes`, `vstack-scorecard`, `vstack-dashboard`,
+  `vstack-trace-zoo`, `vstack-redaction`, `vstack-export`,
+  `vstack-aggregate`) with their real subcommands/flags. `bash -n` and
+  `zsh -n` clean.
+
+### Compatibility
+
+- All 3,173 tests pass (1 skipped: crewai not installed). No API changes.
+
 ## [0.39.0] — 2026-06-23
 
 Three new shell CLIs that expose previously library-only modules — the

@@ -1,4 +1,4 @@
-#compdef vstack vstack-mcp vstack-api vstack-config vstack-upgrade vstack-learn vstack-analytics vstack-browser vstack-gbrain vstack-bench vstack-doctor vstack-hello
+#compdef vstack vstack-mcp vstack-api vstack-config vstack-upgrade vstack-learn vstack-analytics vstack-browser vstack-gbrain vstack-bench vstack-doctor vstack-hello vstack-lewin vstack-goleman vstack-johari vstack-danva vstack-reappraisal vstack-yerkes vstack-hexaco vstack-grant vstack-motivation vstack-sdt vstack-mcgregor vstack-vroom vstack-grpi vstack-process vstack-loafing vstack-superflocks vstack-lencioni vstack-trust-triangle vstack-mcallister vstack-psych-safety vstack-glaser vstack-feedback-triggers vstack-plus-delta vstack-smart-goal vstack-group-decision vstack-debate-pathology vstack-bias-stack vstack-devils-advocate vstack-thomas-kilmann vstack-schein-culture vstack-robbins-culture vstack-org-structure vstack-span-of-control vstack-diagnose vstack-recipes vstack-scorecard vstack-dashboard vstack-trace-zoo vstack-redaction vstack-export vstack-aggregate
 # Zsh completion for the vstack CLI family.
 # Install:
 #   mkdir -p ~/.zsh/completions && cp completions/_vstack ~/.zsh/completions/
@@ -147,7 +147,139 @@ _vstack-hello() {
         '--no-banner[Skip the ASCII banner and footer]'
 }
 
+# ---------------------------------------------------------------------------
+# Shared completion for the 33 pattern CLIs. Every pattern CLI exposes the
+# SAME seven subcommands, so they all dispatch here via #compdef autoload and
+# we key off $service (the command name zsh invoked us with).
+# ---------------------------------------------------------------------------
+_vstack-pattern() {
+    local -a commands
+    commands=(
+        'analyze:Run the pattern analysis over a trace or input.'
+        'batch:Run the pattern over a batch of inputs.'
+        'replay:Replay a saved analysis from a recorded trace.'
+        'validate:Validate input/output against the pattern schema.'
+        'schema:Print the pattern JSON schema.'
+        'playbooks:List the playbooks bundled with this pattern.'
+        'compose:Compose this pattern with others into a workflow.'
+    )
+    _arguments -C '1:command:->cmd'
+    [[ $state == cmd ]] && _describe -t commands "${service} command" commands
+}
+
+# Register every pattern CLI to the shared completion.
+compdef _vstack-pattern \
+    vstack-lewin vstack-goleman vstack-johari vstack-danva vstack-reappraisal \
+    vstack-yerkes vstack-hexaco vstack-grant vstack-motivation vstack-sdt \
+    vstack-mcgregor vstack-vroom vstack-grpi vstack-process vstack-loafing \
+    vstack-superflocks vstack-lencioni vstack-trust-triangle vstack-mcallister \
+    vstack-psych-safety vstack-glaser vstack-feedback-triggers vstack-plus-delta \
+    vstack-smart-goal vstack-group-decision vstack-debate-pathology \
+    vstack-bias-stack vstack-devils-advocate vstack-thomas-kilmann \
+    vstack-schein-culture vstack-robbins-culture vstack-org-structure \
+    vstack-span-of-control 2>/dev/null
+
+# ---------------------------------------------------------------------------
+# Workflow CLIs.
+# ---------------------------------------------------------------------------
+_vstack-diagnose() {
+    _arguments \
+        '--trace[Path to the trace to diagnose]:trace:_files' \
+        '--recipe[Recipe name to apply]:recipe:' \
+        '--client[Client identifier]:client:' \
+        '--shape[Trace shape filter]:shape:' \
+        '--mode[Diagnosis mode]:mode:(quick standard forensic)' \
+        '--patterns[Comma-separated pattern list]:patterns:' \
+        '--list-recipes[List available recipes]' \
+        '--list[List available diagnoses]' \
+        '--json[Emit JSON instead of pretty text]' \
+        '--top[Show only the top N findings]:n:' \
+        '--match[Filter findings by match term]:term:' \
+        '--help[Show help]'
+}
+
+_vstack-recipes() {
+    _arguments \
+        '--cluster[Filter recipes by cluster]:cluster:' \
+        '--shape[Filter recipes by trace shape]:shape:' \
+        '--match[Filter recipes by match term]:term:' \
+        '--q[Free-text query over recipes]:query:' \
+        '--show[Show one recipe by name]:recipe:' \
+        '--json[Emit JSON instead of pretty text]' \
+        '--md[Emit Markdown]' \
+        '--compact[Compact one-line-per-recipe output]' \
+        '--help[Show help]'
+}
+
+_vstack-scorecard() {
+    local -a commands
+    commands=(
+        'compute:Compute a scorecard from traces or reports.'
+        'render:Render a computed scorecard to output.'
+        'compare:Compare two or more scorecards.'
+    )
+    _arguments -C '1:command:->cmd'
+    [[ $state == cmd ]] && _describe -t commands 'vstack-scorecard command' commands
+}
+
+_vstack-dashboard() {
+    local -a commands
+    commands=(
+        'render:Render the dashboard to a static artifact.'
+        'serve:Serve the dashboard over HTTP.'
+    )
+    _arguments -C '1:command:->cmd'
+    [[ $state == cmd ]] && _describe -t commands 'vstack-dashboard command' commands
+}
+
+_vstack-trace-zoo() {
+    local -a commands
+    commands=(
+        'list:List every trace in the zoo.'
+        'show:Show one trace.'
+        'get:Get the raw trace payload.'
+        'categories:List the available trace categories.'
+        'shapes:List the available trace shapes.'
+    )
+    _arguments -C '1:command:->cmd'
+    [[ $state == cmd ]] && _describe -t commands 'vstack-trace-zoo command' commands
+}
+
+_vstack-redaction() {
+    _arguments \
+        '--trace[Path to the trace to redact]:trace:_files' \
+        '--text[Inline text to redact]:text:' \
+        '--list-patterns[List available redaction patterns]' \
+        '--out[Output path]:out:_files' \
+        '--json[Emit JSON instead of pretty text]' \
+        '--help[Show help]'
+}
+
+_vstack-export() {
+    _arguments \
+        '--report[Path to the report to export]:report:_files' \
+        '--format[Export format]:format:(json md html csv)' \
+        '--out[Output path]:out:_files' \
+        '--help[Show help]'
+}
+
+_vstack-aggregate() {
+    _arguments \
+        '--reports[Reports to aggregate]:reports:_files' \
+        '--top[Keep only the top N entries]:n:' \
+        '--json[Emit JSON instead of pretty text]' \
+        '--out[Output path]:out:_files' \
+        '--help[Show help]'
+}
+
 _vstack() {
     # The top-level `vstack` CLI runs the AAR generator.
-    _arguments '1:command:(aar bench version)' '*::arg:_files'
+    local -a commands
+    commands=(
+        'aar:Generate an after-action review.'
+        'bench:Run the benchmark suite.'
+        'version:Print the vstack version.'
+    )
+    _arguments -C '1:command:->cmd' '*::arg:_files'
+    [[ $state == cmd ]] && _describe -t commands 'vstack command' commands
 }

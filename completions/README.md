@@ -29,11 +29,12 @@ mkdir -p ~/.config/fish/completions
 cp completions/vstack.fish ~/.config/fish/completions/
 ```
 
-After install, your shell will complete:
+After install, your shell will complete all **53 CLIs**:
 
-- The 10 top-level CLIs: `vstack`, `vstack-mcp`, `vstack-api`, `vstack-config`, `vstack-upgrade`, `vstack-learn`, `vstack-analytics`, `vstack-browser`, `vstack-gbrain`, `vstack-bench`, `vstack-doctor`
-- The 34 per-pattern CLIs: `vstack-lewin`, `vstack-aar`, `vstack-schein-culture`, etc.
-- Subcommands for each (e.g. `vstack-mcp <Tab>` shows `serve`, `list-tools`, `list-resources`, `config-snippet`)
-- Pattern names where applicable (e.g. `vstack-config gen-platform <Tab>` shows `cursor`, `cline`, etc.)
+- The infrastructure CLIs: `vstack`, `vstack-mcp`, `vstack-api`, `vstack-config`, `vstack-upgrade`, `vstack-learn`, `vstack-analytics`, `vstack-browser`, `vstack-gbrain`, `vstack-bench`, `vstack-doctor`, `vstack-hello`
+- The workflow CLIs: `vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-dashboard`, `vstack-trace-zoo`, `vstack-redaction`, `vstack-export`, `vstack-aggregate`
+- The 33 per-pattern CLIs: `vstack-lewin`, `vstack-lencioni`, `vstack-schein-culture`, etc. (all share `analyze`, `batch`, `replay`, `validate`, `schema`, `playbooks`, `compose`)
+- Subcommands for each (e.g. `vstack-mcp <Tab>` shows `serve`, `list-tools`, `list-resources`, `config-snippet`; `vstack-scorecard <Tab>` shows `compute`, `render`, `compare`)
+- Flags / values where applicable (e.g. `vstack-config gen-platform <Tab>` shows `cursor`, `cline`, etc.; `vstack-diagnose --mode <Tab>` shows `quick`, `standard`, `forensic`)
 
 Reload your shell after install (`exec $SHELL`) or open a fresh terminal.
