@@ -6,6 +6,28 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.53.0] — 2026-06-23
+
+`vstack-import` now reads the two dominant LLM-observability exports.
+
+### Added
+
+- **`vstack.ingest.from_langsmith_runs`** + **`vstack-import --format
+  langsmith`** — convert a LangSmith run (with nested `child_runs` — a run
+  tree) or a flat list of runs into an `AgentTrace`. Maps `run_type`
+  (llm→message, tool→tool_call, chain→thought, retriever→observation, …);
+  uses `inputs`/`outputs`/`error` as step content; infers goal/outcome from
+  the root run. The CLI accepts a single run, a list, or `{"runs": [...]}`.
+- **`vstack-import --format phoenix`** + extended `from_otel_spans` — reads
+  OpenInference attributes (`openinference.span.kind`, `input.value`/
+  `output.value`, `llm.input_messages`/`llm.output_messages`), so Arize
+  Phoenix span exports import cleanly (the generic `otel` format now covers
+  them too).
+
+### Compatibility
+
+- All tests pass. Additive only; no breaking changes.
+
 ## [0.52.0] — 2026-06-23
 
 The Action's CI UX is now complete: gate · annotate · comment.

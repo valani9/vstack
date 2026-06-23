@@ -125,3 +125,72 @@ def test_cli_bad_shape_returns_2() -> None:
     code, _out, err = _run_cli(["--format", "messages"], stdin=json.dumps({"nope": 1}))
     assert code == 2
     assert "vstack-import" in err
+
+
+# --- LangSmith ------------------------------------------------------------
+
+
+def test_from_langsmith_run_tree() -> None:
+    from vstack.ingest import from_langsmith_runs
+
+    tree = {
+        "name": "My Chat Bot",
+        "run_type": "chain",
+        "start_time": "2026-01-01T00:00:00",
+        "inputs": {"text": "summarize meetings"},
+        "outputs": {"output": "done"},
+        "child_runs": [
+            {
+                "name": "My LLM",
+                "run_type": "llm",
+                "start_time": "2026-01-01T00:00:01",
+                "inputs": {"prompts": ["..."]},
+                "outputs": {"generations": ["use the tool"]},
+            },
+            {
+                "name": "loader",
+                "run_type": "tool",
+                "start_time": "2026-01-01T00:00:02",
+                "inputs": {"date": "x"},
+                "error": "boom",
+            },
+        ],
+    }
+    trace = from_langsmith_runs(tree)
+    types = [s.type for s in trace.steps]
+    assert types == ["thought", "message", "tool_call"]  # chain, llm, tool
+    assert trace.goal.startswith("") and "summarize meetings" in trace.goal
+    assert "ERROR: boom" in trace.steps[2].content
+
+
+def test_from_langsmith_flat_list_orders_by_start() -> None:
+    from vstack.ingest import from_langsmith_runs
+
+    runs = [
+        {"name": "b", "run_type": "tool", "start_time": "2026-01-01T00:00:05"},
+        {"name": "a", "run_type": "llm", "start_time": "2026-01-01T00:00:01"},
+    ]
+    trace = from_langsmith_runs(runs)
+    assert [s.metadata["name"] for s in trace.steps] == ["a", "b"]
+
+
+def test_cli_langsmith_single_run() -> None:
+    run = {"name": "root", "run_type": "chain", "inputs": {"q": "hi"}, "outputs": {"a": "ok"}}
+    code, out, _ = _run_cli(["--format", "langsmith"], stdin=json.dumps(run))
+    assert code == 0
+    assert json.loads(out)["agent_framework"] == "langsmith"
+
+
+def test_cli_phoenix_openinference_span() -> None:
+    spans = [
+        {
+            "name": "llm",
+            "start_time": 1,
+            "attributes": {"openinference.span.kind": "LLM", "output.value": "the answer"},
+        }
+    ]
+    code, out, _ = _run_cli(["--format", "phoenix"], stdin=json.dumps(spans))
+    assert code == 0
+    trace = json.loads(out)
+    assert trace["steps"][0]["type"] == "tool_call"
+    assert "the answer" in trace["steps"][0]["content"]

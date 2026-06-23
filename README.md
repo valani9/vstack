@@ -130,11 +130,13 @@ vstack-recipes                                   # browse named bundles (stuck_i
 vstack-diagnose --trace trace.json --recipe stuck_in_loop --client anthropic
 ```
 
-Don't have a vstack trace yet? Import the logs you already have — `vstack-import` converts OpenAI/Anthropic chat-message logs or OpenTelemetry spans into a trace, ready to pipe straight in:
+Don't have a vstack trace yet? Import the logs you already have — `vstack-import` converts OpenAI/Anthropic chat-message logs, OpenTelemetry spans, **Arize Phoenix** (OpenInference) spans, or **LangSmith** runs into a trace, ready to pipe straight in:
 
 ```bash
-vstack-import --format messages chat.json | vstack-diagnose --trace - --client anthropic
-vstack-import --format otel spans.json --goal "ship auth" | vstack-diagnose --trace -
+vstack-import --format messages  chat.json   | vstack-diagnose --trace - --client anthropic
+vstack-import --format otel       spans.json | vstack-diagnose --trace -
+vstack-import --format phoenix    spans.json | vstack-diagnose --trace -
+vstack-import --format langsmith  run.json   | vstack-diagnose --trace -
 ```
 
 ## Install

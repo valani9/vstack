@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any, Sequence
 
-from . import from_chat_messages, from_otel_spans
+from . import from_chat_messages, from_langsmith_runs, from_otel_spans
 
 
 def _load(path: str | None) -> Any:
@@ -53,9 +53,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--format",
         "-f",
-        choices=("messages", "otel"),
+        choices=("messages", "otel", "phoenix", "langsmith"),
         required=True,
-        help="messages = OpenAI/Anthropic chat log; otel = OpenTelemetry spans.",
+        help=(
+            "messages = OpenAI/Anthropic chat log; otel = OpenTelemetry spans; "
+            "phoenix = Arize Phoenix / OpenInference spans; langsmith = LangSmith run(s)."
+        ),
     )
     parser.add_argument("--goal", default="", help="The agent's goal (else inferred).")
     parser.add_argument("--outcome", default="", help="What happened (else inferred).")
@@ -68,24 +71,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", "-o", default=None, help="Write to a file (default: stdout).")
     args = parser.parse_args(argv)
 
+    common = {
+        "goal": args.goal,
+        "outcome": args.outcome,
+        "success": args.success,
+        "agent_id": args.agent_id,
+    }
     try:
         payload = _load(args.input)
         if args.format == "messages":
-            trace = from_chat_messages(
-                _items(payload, "messages"),
-                goal=args.goal,
-                outcome=args.outcome,
-                success=args.success,
-                agent_id=args.agent_id,
-            )
-        else:
-            trace = from_otel_spans(
-                _items(payload, "spans"),
-                goal=args.goal,
-                outcome=args.outcome,
-                success=args.success,
-                agent_id=args.agent_id,
-            )
+            trace = from_chat_messages(_items(payload, "messages"), **common)
+        elif args.format in ("otel", "phoenix"):
+            trace = from_otel_spans(_items(payload, "spans"), **common)
+        else:  # langsmith — accept a single run (tree), a list, or {"runs": [...]}
+            if isinstance(payload, dict) and not isinstance(payload.get("runs"), list):
+                runs: Any = payload  # a single run / run tree
+            else:
+                runs = _items(payload, "runs")
+            trace = from_langsmith_runs(runs, **common)
     except (OSError, ValueError, json.JSONDecodeError) as e:
         print(f"vstack-import: {e}", file=sys.stderr)
         return 2
