@@ -6,6 +6,16 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.50.0] — 2026-06-23
+
+GitHub Marketplace launch of the Action.
+
+### Changed
+
+- **`action.yml` description shortened to 96 chars** to meet the GitHub
+  Marketplace limit (descriptions must be < 125 characters), so the Action
+  can be published/listed in the Marketplace. No behavior change.
+
 ## [0.49.0] — 2026-06-23
 
 The CI ratchet — gate only on *new* findings — plus a `vdiff` correctness fix.

@@ -1,7 +1,5 @@
 name: "vstack agent-quality gate"
-description: >-
-  Diagnose an AI-agent trace with vstack's 34 organizational-behavior
-  patterns and fail the build when findings reach a severity threshold.
+description: "Diagnose an AI-agent trace with 34 organizational-behavior patterns; fail the build on findings."
 author: "Ilhan Valani"
 branding:
   icon: "git-pull-request"
