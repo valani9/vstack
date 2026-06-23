@@ -6,6 +6,36 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.49.0] — 2026-06-23
+
+The CI ratchet — gate only on *new* findings — plus a `vdiff` correctness fix.
+
+### Added
+
+- **`vstack-diagnose --baseline <report.json>`** — compare the current run
+  against a saved diagnose report and, with `--fail-on`, gate **only on
+  findings that are new relative to the baseline**. This is the standard
+  ratchet: a gate won't fail on pre-existing, already-accepted findings, and
+  it tightens as you re-baseline. Prints a `vs baseline: N new, M
+  pre-existing` summary to stderr.
+
+### Fixed
+
+- **`vstack.vdiff.diff_reports` crashed on real reports.** It assumed
+  `per_pattern` was a name-keyed dict, but actual `DiagnoseReport`s (and
+  their JSON) carry `per_pattern` as a *list*. `diff_reports` (and therefore
+  the `vstack-vdiff` CLI) raised `TypeError` on genuine `vstack-diagnose`
+  output; it now normalizes both shapes. Regression test added.
+
+### Changed
+
+- `_gate_exit_code` now takes a list of severities (so the gate can score
+  either all findings or only the new ones).
+
+### Compatibility
+
+- All tests pass. `--baseline` is opt-in; no breaking changes.
+
 ## [0.48.0] — 2026-06-23
 
 SARIF output — vstack findings now flow into GitHub code scanning (Security

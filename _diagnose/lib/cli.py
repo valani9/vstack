@@ -306,6 +306,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             "Use to gate CI directly on the diagnosis. Omit to never fail on findings."
         ),
     )
+    parser.add_argument(
+        "--baseline",
+        default=None,
+        metavar="REPORT.json",
+        help=(
+            "Path to a saved diagnose report (JSON). When set, --fail-on gates only "
+            "on findings that are NEW relative to the baseline — the CI ratchet."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.list:
@@ -381,23 +390,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             print(report.to_markdown())
 
-    # CI gate: exit non-zero when a finding reaches the --fail-on threshold.
-    return _gate_exit_code(report.findings, args.fail_on)
+    # CI gate. With --baseline, gate only on findings NEW vs the baseline
+    # (the "ratchet" — don't fail CI on pre-existing, accepted findings).
+    gated_severities = [f.severity for f in report.findings]
+    if args.baseline is not None:
+        from vstack.vdiff import diff_reports
+
+        try:
+            baseline = json.loads(Path(args.baseline).read_text())
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"vstack-diagnose: could not read --baseline: {e}", file=sys.stderr)
+            return 2
+        delta = diff_reports(baseline, report)
+        new = delta.added
+        gated_severities = [d.severity_after for d in new if d.severity_after]
+        print(
+            f"vs baseline: {len(new)} new finding(s), "
+            f"{len(report.findings) - len(new)} pre-existing.",
+            file=sys.stderr,
+        )
+
+    return _gate_exit_code(gated_severities, args.fail_on)
 
 
-def _gate_exit_code(findings: "list[Any]", fail_on: str | None) -> int:
-    """Return 3 if any finding is at/above ``fail_on``, else 0.
+def _gate_exit_code(severities: list[str], fail_on: str | None) -> int:
+    """Return 3 if any severity is at/above ``fail_on``, else 0.
 
     ``fail_on=None`` never gates. Factored out for direct testing.
     """
     if fail_on is None:
         return 0
     threshold = severity_rank(fail_on)
-    above = [f for f in findings if severity_rank(f.severity) >= threshold]
+    above = [s for s in severities if severity_rank(s) >= threshold]
     if above:
-        worst = max(above, key=lambda f: severity_rank(f.severity))
+        worst = max(above, key=severity_rank)
         print(
-            f"vstack-diagnose: gate failed — found {worst.severity} finding (>= {fail_on}).",
+            f"vstack-diagnose: gate failed — found {worst} finding (>= {fail_on}).",
             file=sys.stderr,
         )
         return 3

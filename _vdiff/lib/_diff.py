@@ -18,11 +18,25 @@ def _get_findings(report: Any) -> list[dict[str, Any]]:
 
 
 def _get_per_pattern(report: Any) -> dict[str, Any]:
+    """Return ``{pattern_name: entry}`` regardless of report shape.
+
+    A real ``DiagnoseReport`` (and its JSON form) carries ``per_pattern`` as a
+    *list* of per-pattern results (objects or dicts, each with a ``pattern``
+    field); older/synthetic reports use a dict keyed by pattern name. Normalize
+    both so diffing works on actual ``vstack-diagnose`` output.
+    """
     if isinstance(report, dict):
-        return dict(report.get("per_pattern", {}))
-    if hasattr(report, "per_pattern"):
-        return dict(report.per_pattern)
-    return {}
+        raw = report.get("per_pattern", [])
+    else:
+        raw = getattr(report, "per_pattern", [])
+    if isinstance(raw, dict):
+        return dict(raw)
+    out: dict[str, Any] = {}
+    for item in raw or []:
+        name = item.get("pattern") if isinstance(item, dict) else getattr(item, "pattern", None)
+        if name is not None:
+            out[str(name)] = item
+    return out
 
 
 def _finding_key(finding: Any) -> tuple[str, str]:

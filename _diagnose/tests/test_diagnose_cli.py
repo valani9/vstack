@@ -136,17 +136,77 @@ def test_runs_diagnose_with_none_client_markdown_output() -> None:
 
 
 def test_gate_exit_code_logic() -> None:
-    from vstack.diagnose import Finding
     from vstack.diagnose.cli import _gate_exit_code
 
-    findings = [
-        Finding(pattern="p", severity="high", title="t"),
-        Finding(pattern="q", severity="low", title="u"),
-    ]
-    assert _gate_exit_code(findings, "high") == 3  # a high finding at/above 'high'
-    assert _gate_exit_code(findings, "critical") == 0  # nothing reaches 'critical'
-    assert _gate_exit_code(findings, None) == 0  # no gate
+    severities = ["high", "low"]
+    assert _gate_exit_code(severities, "high") == 3  # a high severity at/above 'high'
+    assert _gate_exit_code(severities, "critical") == 0  # nothing reaches 'critical'
+    assert _gate_exit_code(severities, None) == 0  # no gate
     assert _gate_exit_code([], "high") == 0  # no findings
+
+
+def test_baseline_ratchet_passes_on_preexisting_findings(tmp_path) -> None:
+    # Baseline already has a high finding; the current run (client none) finds
+    # nothing new, so --fail-on high passes because nothing is NEW.
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(
+        json.dumps(
+            {
+                "shape": "individual",
+                "findings": [
+                    {
+                        "pattern": "aar",
+                        "severity": "high",
+                        "title": "known",
+                        "evidence": "",
+                        "intervention": "",
+                    }
+                ],
+                "errors": {},
+                "per_pattern": [
+                    {"pattern": "aar", "elapsed_seconds": 0, "finding_count": 1, "error": None}
+                ],
+            }
+        )
+    )
+    payload = {
+        "agent_id": "a",
+        "goal": "g",
+        "steps": [{"timestamp": "2026-01-01T00:00:00Z", "type": "observation", "content": "x"}],
+        "outcome": "o",
+        "success": False,
+    }
+    code, _out, err = _run(
+        [
+            "--client",
+            "none",
+            "--shape",
+            "individual",
+            "--fail-on",
+            "high",
+            "--baseline",
+            str(baseline),
+        ],
+        stdin=json.dumps(payload),
+    )
+    assert code == 0
+    assert "new finding" in err  # the baseline summary line
+
+
+def test_baseline_missing_file_returns_2(tmp_path) -> None:
+    payload = {
+        "agent_id": "a",
+        "goal": "g",
+        "steps": [{"timestamp": "2026-01-01T00:00:00Z", "type": "observation", "content": "x"}],
+        "outcome": "o",
+        "success": False,
+    }
+    code, _out, err = _run(
+        ["--client", "none", "--baseline", str(tmp_path / "nope.json")],
+        stdin=json.dumps(payload),
+    )
+    assert code == 2
+    assert "--baseline" in err
 
 
 def test_fail_on_no_findings_exits_zero() -> None:

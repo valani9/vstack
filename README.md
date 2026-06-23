@@ -542,7 +542,11 @@ Not on GitHub Actions? The same gating works from any shell — the core CLI is 
 ```bash
 vstack-diagnose --trace run.json --fail-on high     # exit 3 if any finding ≥ high
 vstack-diagnose --trace run.json --sarif > vstack.sarif   # SARIF 2.1.0 for any code-scanning tool
+vstack-diagnose --trace run.json --fail-on high \
+  --baseline last-good.json                          # ratchet: only fail on findings NEW vs the baseline
 ```
+
+The `--baseline` ratchet gates on *new* findings only, so a CI gate won't fail on pre-existing, already-accepted findings — save a report with `--json` once, commit it as the baseline, and the gate tightens over time.
 
 ## Framework adapters
 

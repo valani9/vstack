@@ -210,3 +210,26 @@ class TestEdgeCases:
 
         delta = diff_reports(FakeReport(), FakeReport())
         assert delta.before_count == 1
+
+
+def test_diff_handles_real_list_shaped_per_pattern():
+    """Regression: real DiagnoseReport JSON carries per_pattern as a LIST of
+    dicts (not a name-keyed dict). diff_reports must not crash on it."""
+    from vstack.vdiff import diff_reports
+
+    before = {
+        "shape": "individual",
+        "findings": [],
+        "per_pattern": [{"pattern": "lewin", "finding_count": 0, "error": None}],
+    }
+    after = {
+        "shape": "individual",
+        "findings": [{"pattern": "aar", "severity": "high", "title": "new"}],
+        "per_pattern": [
+            {"pattern": "lewin", "finding_count": 0, "error": None},
+            {"pattern": "aar", "finding_count": 1, "error": None},
+        ],
+    }
+    delta = diff_reports(before, after)
+    assert "aar" in delta.patterns_added
+    assert [d.title for d in delta.added] == ["new"]
