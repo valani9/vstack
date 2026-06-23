@@ -105,3 +105,36 @@ def test_sarif_from_report() -> None:
         results[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
         == "traces/run.json"
     )
+
+
+def test_comment_file_written(tmp_path, monkeypatch) -> None:
+    # When VSTACK_COMMENT is set, main() writes the Markdown summary to it.
+    import json as _json
+
+    trace = tmp_path / "t.json"
+    trace.write_text(
+        _json.dumps(
+            {
+                "agent_id": "a",
+                "goal": "g",
+                "steps": [
+                    {"timestamp": "2026-01-01T00:00:00Z", "type": "observation", "content": "x"}
+                ],
+                "outcome": "o",
+                "success": False,
+            }
+        )
+    )
+    comment = tmp_path / "comment.md"
+    monkeypatch.chdir(tmp_path)
+    rc = gate.main(
+        {
+            "VSTACK_TRACE": str(trace),
+            "VSTACK_FAIL_ON": "high",
+            "VSTACK_CLIENT": "none",
+            "VSTACK_COMMENT": str(comment),
+        }
+    )
+    assert rc == 0
+    body = comment.read_text()
+    assert "vstack agent-quality gate" in body

@@ -6,6 +6,23 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.52.0] — 2026-06-23
+
+The Action's CI UX is now complete: gate · annotate · comment.
+
+### Added
+
+- **GitHub Action `comment` input + output** — set `comment: vstack-comment.md`
+  and the Action writes the findings summary (Markdown) to that path; the
+  example workflow posts it as a **sticky PR comment** via
+  `marocchino/sticky-pull-request-comment`, so findings land in the PR
+  conversation (not just the job summary). Complements the existing build
+  **gate** (`fail-on`) and code-scanning **annotations** (`sarif`). +1 test.
+
+### Compatibility
+
+- All tests pass. Opt-in; no breaking changes.
+
 ## [0.51.0] — 2026-06-23
 
 Bring-your-own-traces: import the logs you already have into a vstack trace.

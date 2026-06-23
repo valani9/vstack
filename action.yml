@@ -42,6 +42,12 @@ inputs:
       github/codeql-action/upload-sarif to surface findings in code scanning).
     required: false
     default: ""
+  comment:
+    description: >-
+      If set to a path, write the findings summary (Markdown) there so you can
+      post it as a sticky PR comment (e.g. marocchino/sticky-pull-request-comment).
+    required: false
+    default: ""
   version:
     description: "valanistack version to install (e.g. '0.45.0'). Empty = latest."
     required: false
@@ -64,6 +70,9 @@ outputs:
   sarif:
     description: "Path to the written SARIF report (empty unless `sarif` input set)."
     value: ${{ steps.gate.outputs.sarif }}
+  comment:
+    description: "Path to the written Markdown comment (empty unless `comment` input set)."
+    value: ${{ steps.gate.outputs.comment }}
 
 runs:
   using: "composite"
@@ -106,4 +115,5 @@ runs:
         VSTACK_CLIENT: ${{ inputs.client }}
         VSTACK_SHAPE: ${{ inputs.shape }}
         VSTACK_SARIF: ${{ inputs.sarif }}
+        VSTACK_COMMENT: ${{ inputs.comment }}
       run: python "${{ github.action_path }}/.github/action/gate.py"

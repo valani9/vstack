@@ -35,13 +35,14 @@ jobs:
       # Full LLM-backed gate (needs a key in repo secrets):
       - name: vstack gate (LLM-backed)
         id: vstack
-        uses: valani9/vstack@v0.48.0
+        uses: valani9/vstack@v0.52.0
         with:
           trace: traces/latest.json
           client: anthropic
           mode: standard
           fail-on: high
-          sarif: vstack.sarif        # also emit SARIF for code scanning
+          sarif: vstack.sarif          # emit SARIF for code scanning
+          comment: vstack-comment.md   # write a Markdown findings summary
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
@@ -52,3 +53,10 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.vstack.outputs.sarif }}
+
+      # Post (and keep updating) a sticky findings comment on the PR:
+      - name: Comment findings on PR
+        if: always() && github.event_name == 'pull_request' && steps.vstack.outputs.comment != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ${{ steps.vstack.outputs.comment }}

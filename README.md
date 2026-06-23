@@ -542,7 +542,7 @@ vstack ships as a composite **GitHub Action** so you can shift agent-quality lef
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-It writes a findings table to the job summary and exposes `max-severity`, `findings-count`, `report`, and `sarif` outputs. With `client: none` it runs the deterministic analyzers only (no API key needed) — a free smoke gate. Set `sarif: vstack.sarif` to also emit a **SARIF 2.1.0** report and upload it with `github/codeql-action/upload-sarif` — findings then show up in the **Security tab and as PR annotations**. Full example: [examples/github-action/agent-quality-gate.yml](examples/github-action/agent-quality-gate.yml).
+It writes a findings table to the job summary and exposes `max-severity`, `findings-count`, `report`, `sarif`, and `comment` outputs. With `client: none` it runs the deterministic analyzers only (no API key needed) — a free smoke gate. The full CI UX: **gate** the build (`fail-on`), **annotate** the PR (`sarif: vstack.sarif` → `github/codeql-action/upload-sarif` → Security tab + inline annotations), and **comment** in the PR conversation (`comment: vstack-comment.md` → a sticky comment via `marocchino/sticky-pull-request-comment`). Full example: [examples/github-action/agent-quality-gate.yml](examples/github-action/agent-quality-gate.yml).
 
 Not on GitHub Actions? The same gating works from any shell — the core CLI is self-contained:
 

@@ -184,6 +184,13 @@ def main(env: dict[str, str] | None = None) -> int:
 
     summary = render_summary(report, findings, fail_on, failed, max_sev)
     _write_summary(summary)
+
+    comment_path = (env.get("VSTACK_COMMENT") or "").strip()
+    if comment_path:
+        with open(comment_path, "w", encoding="utf-8") as fh:
+            fh.write(summary)
+        _set_output("comment", comment_path)
+
     print(summary)
     return 1 if failed else 0
 
