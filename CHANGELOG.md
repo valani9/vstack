@@ -6,6 +6,30 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.51.0] — 2026-06-23
+
+Bring-your-own-traces: import the logs you already have into a vstack trace.
+
+### Added
+
+- **`vstack.ingest`** — trace importers that build the canonical
+  `AgentTrace` from real data:
+  - `from_chat_messages(messages, …)` — OpenAI/Anthropic chat logs
+    (`{role, content, tool_calls}`); maps system/user/assistant/tool to
+    trace steps, infers goal (first user message) + outcome (last
+    assistant message), flattens multimodal content.
+  - `from_otel_spans(spans, …)` — OpenTelemetry spans (best-effort; reads
+    `gen_ai.*` attributes as a dict or OTLP `{key,value}` list, orders by
+    start time, classifies GenAI vs other spans).
+- **`vstack-import` CLI** — `vstack-import --format {messages,otel} input.json`
+  emits an `AgentTrace` JSON, designed to pipe straight into
+  `vstack-diagnose --trace -`. (CLI surface: 59 → 60.)
+- `_ingest` wired into CI (pytest + ruff + `mypy --strict`).
+
+### Compatibility
+
+- All tests pass. Additive only; no breaking changes.
+
 ## [0.50.0] — 2026-06-23
 
 GitHub Marketplace launch of the Action.

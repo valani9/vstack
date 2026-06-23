@@ -130,6 +130,13 @@ vstack-recipes                                   # browse named bundles (stuck_i
 vstack-diagnose --trace trace.json --recipe stuck_in_loop --client anthropic
 ```
 
+Don't have a vstack trace yet? Import the logs you already have — `vstack-import` converts OpenAI/Anthropic chat-message logs or OpenTelemetry spans into a trace, ready to pipe straight in:
+
+```bash
+vstack-import --format messages chat.json | vstack-diagnose --trace - --client anthropic
+vstack-import --format otel spans.json --goal "ship auth" | vstack-diagnose --trace -
+```
+
 ## Install
 
 > [!TIP]
@@ -326,7 +333,7 @@ vstack ships **13 invocation surfaces**. Same patterns, same data shape, differe
 | # | Surface | Get it with | Use when |
 |---|---|---|---|
 | 1 | **Python imports** | `pip install valanistack` | You're building in Python and want patterns as library calls |
-| 2 | **59 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-redaction`, `vstack-export`, `vstack-aggregate`, `vstack-findings-db`, `vstack-trace-diff`, `vstack-heatmap`, `vstack-timeline`, `vstack-synth`, `vstack-vdiff`, …) | Shell scripts, CI checks, one-shot diagnoses |
+| 2 | **60 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-import`, `vstack-recipes`, `vstack-scorecard`, `vstack-redaction`, `vstack-export`, `vstack-aggregate`, `vstack-findings-db`, `vstack-trace-diff`, `vstack-heatmap`, `vstack-timeline`, `vstack-synth`, `vstack-vdiff`, …) | Shell scripts, CI checks, one-shot diagnoses |
 | 3 | **MCP server** | `pip install "valanistack[mcp]"` · `vstack-mcp serve` | Any MCP-speaking AI client (see table below) |
 | 4 | **REST API (FastAPI)** | `pip install "valanistack[api]"` · `vstack-api serve` | Production multi-tenant deploys; auth + rate-limit baked in |
 | 5 | **Docker** | `docker pull ghcr.io/valani9/vstack:0.37.0` | Kubernetes deploys; multi-arch (amd64 + arm64) |

@@ -1,6 +1,6 @@
 [project]
 name = "valanistack"
-version = "0.50.0"
+version = "0.51.0"
 description = "Organizational behavior, practiced on AI agents."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -162,6 +162,7 @@ vstack-heatmap = "vstack.heatmap._cli:main"
 vstack-timeline = "vstack.timeline._cli:main"
 vstack-synth = "vstack.synth._cli:main"
 vstack-vdiff = "vstack.vdiff._cli:main"
+vstack-import = "vstack.ingest._cli:main"
 vstack-lewin = "vstack.lewin.cli:main"
 vstack-goleman = "vstack.goleman_ei.cli:main"
 vstack-johari = "vstack.johari.cli:main"
@@ -262,6 +263,7 @@ only-include = []
 "_priority_queue/lib" = "vstack/priority_queue"
 "_snippet/lib" = "vstack/snippet"
 "_aggregate/lib" = "vstack/aggregate"
+"_ingest/lib" = "vstack/ingest"
 # Claude Code skill bundle — shipped inside the wheel so
 # `vstack-config install-skills` works for `pip install` users, not just
 # repo checkouts. Resolved first by `_resolve_skills_source`.
@@ -381,6 +383,7 @@ testpaths = [
     "_priority_queue",
     "_snippet",
     "_aggregate",
+    "_ingest",
 ]
 addopts = "-ra --tb=short --strict-markers"
 filterwarnings = [

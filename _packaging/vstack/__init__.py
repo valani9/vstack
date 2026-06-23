@@ -73,7 +73,7 @@ See ``PATTERNS.md`` for the full pattern index and per-pattern import paths.
 
 from __future__ import annotations
 
-__version__ = "0.50.0"
+__version__ = "0.51.0"
 
 # The diagnose() function and PATTERNS registry are lazy-imported below
 # so that ``import vstack`` itself stays cheap. Pattern sub-packages
