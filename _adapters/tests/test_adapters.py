@@ -314,3 +314,59 @@ def test_require_module_raises_actionable_error() -> None:
     with pytest.raises(AdapterImportError) as exc:
         require_module("definitely_not_a_real_module", extras_hint="langchain")
     assert "valanistack[langchain]" in str(exc.value)
+
+
+# ----------------------------------------------------------------------
+# Agno (framework-free: plain callables, no install gate)
+# ----------------------------------------------------------------------
+
+
+def test_agno_tools_one_per_pattern() -> None:
+    from vstack.adapters.agno import as_agno_tools
+
+    tools = as_agno_tools(llm_client_factory=lambda: StubClient([]))
+    assert len(tools) == 34
+    assert all(callable(t) for t in tools)
+    # Each callable carries the tool name + an Args:-style docstring so
+    # Agno introspects it correctly.
+    names = {t.__name__ for t in tools}
+    assert "vstack_lewin" in names
+    assert all(n.startswith("vstack_") for n in names)
+    sample = next(t for t in tools if t.__name__ == "vstack_lewin")
+    assert "Args:" in (sample.__doc__ or "")
+    assert "trace" in (sample.__doc__ or "")
+
+
+@pytest.mark.skipif(not _has_module("agno"), reason="agno not installed")
+def test_agno_tools_introspectable_when_installed() -> None:
+    # Agno builds a Function schema from the callable's signature + docstring.
+    from agno.tools.function import Function
+
+    from vstack.adapters.agno import as_agno_tools
+
+    tools = as_agno_tools(llm_client_factory=lambda: StubClient([]))
+    fn = next(t for t in tools if t.__name__ == "vstack_lewin")
+    func = Function.from_callable(fn)
+    assert func.name == "vstack_lewin"
+    params = (func.parameters or {}).get("properties", {})
+    assert "trace" in params and "mode" in params
+
+
+# ----------------------------------------------------------------------
+# smolagents (framework-gated: native Tool subclasses)
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _has_module("smolagents"), reason="smolagents not installed")
+def test_smolagents_tools_when_installed() -> None:
+    from smolagents import Tool
+
+    from vstack.adapters.smolagents import as_smolagents_tools
+
+    tools = as_smolagents_tools(llm_client_factory=lambda: StubClient([]))
+    assert len(tools) == 34
+    assert all(isinstance(t, Tool) for t in tools)
+    sample = next(t for t in tools if t.name == "vstack_lewin")
+    assert sample.output_type == "object"
+    assert set(sample.inputs) == {"trace", "mode"}
+    assert sample.inputs["mode"].get("nullable") is True

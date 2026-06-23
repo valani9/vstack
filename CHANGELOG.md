@@ -6,6 +6,32 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.42.0] — 2026-06-23
+
+Two more framework adapters — vstack's 34 patterns now bind natively to
+Hugging Face **smolagents** and **Agno**, two ecosystems flagged as wanted
+in `CONTRIBUTING.md`.
+
+### Added
+
+- **`vstack.adapters.smolagents`** — `as_smolagents_tools()` returns one
+  native smolagents `Tool` subclass per pattern (`name` / `description` /
+  `inputs` / `output_type` / `forward`). Each takes a `trace` object plus
+  an optional `mode` and returns the detection. Framework-gated; install
+  with `pip install 'valanistack[smolagents]'`.
+- **`vstack.adapters.agno`** — `as_agno_tools()` returns one plain Python
+  callable per pattern, each carrying the tool name + an `Args:` docstring
+  so Agno introspects it. No Agno import required to use them (framework-
+  free, like the AutoGen adapter) — pass straight to `Agent(tools=...)`.
+- Both verified against the real frameworks (smolagents 1.26, Agno);
+  `smolagents` added to the `[adapters]` bundle. Adapter count: 8 → 10.
+
+### Compatibility
+
+- All tests pass. The smolagents test skips when the framework isn't
+  installed (CI), matching the other framework-gated adapters. No breaking
+  changes.
+
 ## [0.41.0] — 2026-06-23
 
 Four analytical shell CLIs that complete the "track findings → debug
