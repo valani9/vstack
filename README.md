@@ -532,7 +532,13 @@ Full deploy + Kubernetes runbook: [docs/operations/deploy.md](docs/operations/de
 
 ## Gate agent quality in CI (GitHub Action)
 
-vstack ships as a composite **GitHub Action** so you can shift agent-quality left — diagnose a trace on every PR and fail the build when findings cross a severity threshold:
+One command scaffolds the whole workflow into your repo:
+
+```bash
+vstack-config init-ci      # writes .github/workflows/vstack-agent-quality.yml
+```
+
+Or wire it by hand — vstack ships as a composite **GitHub Action** so you can shift agent-quality left, diagnosing a trace on every PR and failing the build when findings cross a severity threshold:
 
 ```yaml
 - uses: valani9/vstack@v0.45.0

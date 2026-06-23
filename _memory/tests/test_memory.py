@@ -326,3 +326,43 @@ def test_gen_platform_write_refuses_overwrite(tmp_home: Path, tmp_path: Path) ->
     rc = cli_main(["gen-platform", "cursor", "--write", "--out", str(dest), "--force"])
     assert rc == 0
     assert "mcpServers" in dest.read_text()
+
+
+# ----------------------------------------------------------------------
+# init-ci subcommand
+# ----------------------------------------------------------------------
+
+
+def test_init_ci_dry_run_prints_workflow(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "wf.yml"
+    rc = cli_main(["init-ci", "--out", str(out), "--dry-run"])
+    assert rc == 0
+    printed = capsys.readouterr().out
+    assert "Agent quality gate" in printed
+    assert "valani9/vstack@" in printed
+    assert not out.exists()
+
+
+def test_init_ci_writes_then_refuses_then_forces(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "nested" / "vstack.yml"
+    rc = cli_main(["init-ci", "--out", str(out)])
+    assert rc == 0
+    body = out.read_text()
+    import yaml
+
+    doc = yaml.safe_load(body)  # valid YAML workflow
+    assert "vstack-gate" in doc["jobs"]
+    capsys.readouterr()
+
+    # second run without --force refuses
+    rc = cli_main(["init-ci", "--out", str(out)])
+    assert rc == 2
+    assert "already exists" in capsys.readouterr().err
+
+    # --force overwrites
+    rc = cli_main(["init-ci", "--out", str(out), "--force"])
+    assert rc == 0

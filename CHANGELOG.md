@@ -6,6 +6,24 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.54.0] — 2026-06-23
+
+One-command CI onboarding.
+
+### Added
+
+- **`vstack-config init-ci`** — scaffolds a ready-to-run GitHub Actions
+  workflow (`.github/workflows/vstack-agent-quality.yml`) that wires up the
+  full gate: diagnose a trace on each PR, `fail-on: high`, upload SARIF to
+  code scanning, and post a sticky PR comment. Pins the Action to the
+  installed vstack version. `--out` / `--force` / `--dry-run` like
+  `install-skills`. Takes a repo from "installed" to "gating in CI" in one
+  command.
+
+### Compatibility
+
+- All tests pass. Additive only; no breaking changes.
+
 ## [0.53.0] — 2026-06-23
 
 `vstack-import` now reads the two dominant LLM-observability exports.
