@@ -300,6 +300,16 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 
+# numpy (a transitive dep of some optional framework extras) ships inline
+# stubs that use the 3.12 `type X = ...` statement. Because we type-check
+# against python_version 3.11, mypy can't parse those stubs and aborts
+# ("Type statement is only supported in Python 3.12 and greater"). vstack
+# does not depend on numpy directly, so skip following it entirely.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = [

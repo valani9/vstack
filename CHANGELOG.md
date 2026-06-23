@@ -39,6 +39,16 @@ thirty-six library modules and fifty CLIs shipped since v0.7.0.
   to exercise `setup_otel` but called `_otel_check_available`) with real
   `setup_otel` / `is_enabled` coverage that does not pollute global OTel
   state.
+- **CI mypy failure from upstream numpy churn** — numpy 2.5.0 (a transitive
+  dep of some framework extras) ships inline stubs using the 3.12
+  `type X = ...` statement, which mypy can't parse under `python_version
+  3.11` ("Type statement is only supported in Python 3.12 and greater").
+  Added a `[[tool.mypy.overrides]]` entry that skips following numpy, since
+  vstack has no direct numpy dependency.
+- **Docs build (strict mkdocs) had been failing since v0.36.0** — the
+  LangChain integration page linked `../composition.md#langchain`, but the
+  file lives at `concepts/composition.md`. Fixed the link so the hosted
+  docs site can deploy again.
 
 ### Changed
 
