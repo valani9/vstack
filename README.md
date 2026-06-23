@@ -305,7 +305,7 @@ vstack ships **12 invocation surfaces**. Same patterns, same data shape, differe
 | # | Surface | Get it with | Use when |
 |---|---|---|---|
 | 1 | **Python imports** | `pip install valanistack` | You're building in Python and want patterns as library calls |
-| 2 | **53 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-redaction`, `vstack-export`, `vstack-aggregate`, …) | Shell scripts, CI checks, one-shot diagnoses |
+| 2 | **57 CLIs** | `vstack-<pattern>` + workflow CLIs (`vstack-diagnose`, `vstack-recipes`, `vstack-scorecard`, `vstack-redaction`, `vstack-export`, `vstack-aggregate`, `vstack-findings-db`, `vstack-trace-diff`, `vstack-heatmap`, `vstack-timeline`, …) | Shell scripts, CI checks, one-shot diagnoses |
 | 3 | **MCP server** | `pip install "valanistack[mcp]"` · `vstack-mcp serve` | Any MCP-speaking AI client (see table below) |
 | 4 | **REST API (FastAPI)** | `pip install "valanistack[api]"` · `vstack-api serve` | Production multi-tenant deploys; auth + rate-limit baked in |
 | 5 | **Docker** | `docker pull ghcr.io/valani9/vstack:0.37.0` | Kubernetes deploys; multi-arch (amd64 + arm64) |
@@ -346,15 +346,15 @@ Beyond the 34 diagnostic patterns, vstack ships a **library layer** for capturin
 
 | Module | What it does |
 |---|---|
-| `vstack.findings_db` | SQLite-backed finding store |
+| `vstack.findings_db` | SQLite-backed finding store (`vstack-findings-db`) |
 | `vstack.export` | Export findings to CSV / JSON / Markdown / GitHub / Jira (`vstack-export`) |
 | `vstack.aggregate` | Cross-report aggregation + co-occurrence matrix (`vstack-aggregate`) |
 | `vstack.scorecard` | Per-agent multi-pattern scorecard (`vstack-scorecard`) |
 | `vstack.dashboard` | Terminal findings dashboard (`vstack-dashboard`) |
 | `vstack.snippet` | Minimal relevant-step trace excerpts |
-| `vstack.timeline` | Chronological ASCII event timeline |
-| `vstack.heatmap` | ASCII + HTML severity heatmaps |
-| `vstack.trace_diff` | Structural diff of two `AgentTrace`s |
+| `vstack.timeline` | Chronological ASCII event timeline (`vstack-timeline`) |
+| `vstack.heatmap` | ASCII + HTML severity heatmaps (`vstack-heatmap`) |
+| `vstack.trace_diff` | Structural diff of two `AgentTrace`s (`vstack-trace-diff`) |
 | `vstack.vdiff` | Structured diff of two `DiagnoseReport`s |
 
 **Cost & caching**

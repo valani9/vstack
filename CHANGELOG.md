@@ -6,6 +6,35 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.41.0] — 2026-06-23
+
+Four analytical shell CLIs that complete the "track findings → debug
+regressions → visualize" loop. CLI surface: 53 → 57.
+
+### Added
+
+- **`vstack-findings-db`** — persistent SQLite finding store at the shell:
+  `add` (ingest a diagnose report), `list` (filter by pattern / severity /
+  agent / run / time), `stats` (`count_by`). `--db PATH` (default
+  `~/.vstack/findings.db`). The "track findings over time" tool.
+- **`vstack-trace-diff`** — `--before a.json --after b.json [--json]`
+  structurally diffs two `AgentTrace`s and renders the delta (added /
+  removed / changed steps, outcome + success change, REGRESSION/RECOVERY
+  verdict). The "what changed between a passing and failing run" debugger.
+- **`vstack-heatmap`** — `--reports reports.json [--by {dimension,trace}]
+  [--format {ascii,html}]` renders a pattern severity heatmap.
+- **`vstack-timeline`** — `--reports reports.json [--format
+  {markdown,sparkline}] [--bucket ...]` renders a chronological view of
+  findings.
+- Each CLI is a thin, fully-typed (`mypy --strict`), ruff-clean,
+  unit-tested shell over existing public module functions — no new business
+  logic. The modules already shipped in the wheel, so the CLIs are available
+  to `pip install` users immediately.
+
+### Compatibility
+
+- All tests pass. No breaking changes.
+
 ## [0.40.0] — 2026-06-23
 
 Tooling correctness: `vstack-doctor` and the shell completions now know
