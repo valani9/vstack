@@ -6,6 +6,37 @@ project adheres to [Semantic Versioning](https://semver.org/) from
 `1.0.0` onward. During the `0.x` series, minor bumps may include
 breaking changes (see API stability promise in `vstack/__init__.py`).
 
+## [0.43.0] — 2026-06-23
+
+Two more framework adapters — vstack's 34 patterns now bind natively to
+**Google ADK** and **AWS Strands**. Twelve adapters total.
+
+### Added
+
+- **`vstack.adapters.adk`** — `as_adk_tools()` returns one Google ADK
+  `FunctionTool` per pattern (`FunctionTool(func=...)`), ready for
+  `Agent(tools=...)`. Framework-gated; install with
+  `pip install 'valanistack[adk]'`.
+- **`vstack.adapters.strands`** — `as_strands_tools()` returns one AWS
+  Strands `@tool`-decorated callable per pattern (a `DecoratedFunctionTool`
+  with the right `tool_name` + spec). Framework-gated; install with
+  `pip install 'valanistack[strands]'`.
+- Both verified against the real frameworks (google-adk, strands-agents).
+  They install as their own extras (ADK's google-cloud deps are heavy), so
+  they're not bundled into `[adapters]`/`[all]`.
+
+### Fixed
+
+- The adapter test suite's `_has_module` helper now uses
+  `importlib.util.find_spec` (availability check) instead of importing the
+  module — importing a heavy framework like google-adk at collection time
+  could fail for reasons unrelated to whether it's installed.
+
+### Compatibility
+
+- All tests pass; the ADK/Strands tests skip when their framework isn't
+  installed (CI). No breaking changes.
+
 ## [0.42.0] — 2026-06-23
 
 Two more framework adapters — vstack's 34 patterns now bind natively to

@@ -9,7 +9,7 @@ the import-error path is actionable.
 
 from __future__ import annotations
 
-import importlib
+import importlib.util
 import json
 
 import pytest
@@ -253,10 +253,13 @@ def test_openwebui_manifest_shape() -> None:
 
 
 def _has_module(name: str) -> bool:
+    # Use find_spec so we test *availability* without executing the
+    # package's __init__ at collection time — importing a heavy adapter
+    # framework (e.g. google-adk) during collection can fail for reasons
+    # unrelated to whether it's installed.
     try:
-        importlib.import_module(name)
-        return True
-    except ImportError:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
         return False
 
 
@@ -370,3 +373,37 @@ def test_smolagents_tools_when_installed() -> None:
     assert sample.output_type == "object"
     assert set(sample.inputs) == {"trace", "mode"}
     assert sample.inputs["mode"].get("nullable") is True
+
+
+# ----------------------------------------------------------------------
+# Google ADK (framework-gated: FunctionTool objects)
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+@pytest.mark.skipif(not _has_module("google.adk"), reason="google-adk not installed")
+def test_adk_tools_when_installed() -> None:
+    from google.adk.tools.function_tool import FunctionTool
+
+    from vstack.adapters.adk import as_adk_tools
+
+    tools = as_adk_tools(llm_client_factory=lambda: StubClient([]))
+    assert len(tools) == 34
+    assert all(isinstance(t, FunctionTool) for t in tools)
+    names = {t.name for t in tools}
+    assert "vstack_lewin" in names
+
+
+# ----------------------------------------------------------------------
+# AWS Strands (framework-gated: @tool-decorated callables)
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _has_module("strands"), reason="strands-agents not installed")
+def test_strands_tools_when_installed() -> None:
+    from vstack.adapters.strands import as_strands_tools
+
+    tools = as_strands_tools(llm_client_factory=lambda: StubClient([]))
+    assert len(tools) == 34
+    names = {t.tool_name for t in tools}
+    assert "vstack_lewin" in names

@@ -310,7 +310,7 @@ vstack ships **12 invocation surfaces**. Same patterns, same data shape, differe
 | 4 | **REST API (FastAPI)** | `pip install "valanistack[api]"` · `vstack-api serve` | Production multi-tenant deploys; auth + rate-limit baked in |
 | 5 | **Docker** | `docker pull ghcr.io/valani9/vstack:0.37.0` | Kubernetes deploys; multi-arch (amd64 + arm64) |
 | 6 | **Claude Code skills** | `vstack-config install-skills` (ships in the wheel) | Installs the 9 task-shaped skills into `~/.claude/skills/vstack/` so `/vstack`, `/vstack-diagnose`, `/vstack-audit-crew`, `/vstack-post-incident`, etc. show up in Claude Code |
-| 7 | **Framework adapters** | `pip install "valanistack[adapters]"` | LangChain · LangGraph · CrewAI · AutoGen · LlamaIndex · Pydantic AI · smolagents · Agno |
+| 7 | **Framework adapters** | `pip install "valanistack[adapters]"` | LangChain · LangGraph · CrewAI · AutoGen · LlamaIndex · Pydantic AI · smolagents · Agno · Google ADK · Strands |
 | 8 | **OpenAI / Anthropic tool JSON** | `vstack.adapters.openai` (`as_openai_tool_schemas` · `as_anthropic_tool_schemas`) | Pure-JSON tool manifests — no library install on the consumer side |
 | 9 | **Open WebUI plugin** | `vstack.adapters.openwebui` | Drop-in tool manifest for Open WebUI |
 | 10 | **Tier B platform generators** | `vstack-config gen-platform <client>` | Aider · Goose · Kiro · OpenClaw · Codex CLI · OpenCode · docker-compose |
@@ -530,6 +530,12 @@ from vstack.adapters.smolagents import as_smolagents_tools
 
 # Agno (no agno import needed — plain callables)
 from vstack.adapters.agno import as_agno_tools
+
+# Google ADK (FunctionTool objects)
+from vstack.adapters.adk import as_adk_tools
+
+# AWS Strands (native @tool-decorated callables)
+from vstack.adapters.strands import as_strands_tools
 ```
 
 OpenAI Assistants and Anthropic Messages tool JSON ship without any framework install (both live in `vstack.adapters.openai`):
